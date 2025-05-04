@@ -1,0 +1,49 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Tech Stack Overview for "Terrasse au Soleil"
+
+This project uses a modern, high-performance web stack optimized for geospatial visualization and beautiful UI. All contributors and code LLMs should be aware of the following core technologies:
+
+## Core Technologies
+- **Next.js 15 (App Router)**: Main frontend framework, using React Server Components for performance and modularity.
+- **React**: Component-based UI development.
+- **Tailwind CSS**: Utility-first CSS framework for styling, with custom design tokens.
+- **Supabase (with PostGIS)**: Cloud database and spatial backend for terrace and sunshine data.
+- **MapLibre GL JS**: Open-source map rendering library for interactive maps.
+- **Vercel**: Deployment platform, using Edge Functions for location-based optimizations.
+
+## Key Libraries & Utilities
+- `framer-motion`: Advanced UI and map effect animations (e.g., Solar Flare effect).
+- `swr`: Data fetching, caching, and revalidation on the client.
+- `csv-parser`: For local CSV data parsing during development.
+- `supercluster`: Efficient clustering of map markers.
+- `@vercel/analytics`: Simple, privacy-focused analytics.
+- `date-fns`: Date and time utilities.
+- `tailwind-merge`: Utility for merging Tailwind classes conditionally.
+
+## Project Structure
+- See [DEV_PLAN.md](mdc:DEV_PLAN.md) for a detailed directory and file structure.
+
+## Data Handling
+- Sunshine and terrace data is stored in Supabase (PostGIS) for production, and in CSV for development/testing.
+- GeoJSON is used for map data interchange.
+
+## Map & Geospatial
+- MapLibre GL JS is used for rendering, with custom map styles in `public/map-styles/`.
+- Supercluster is used for marker clustering.
+- Mapbox Geocoding API is used for search functionality.
+
+## Deployment & Performance
+- Vercel is used for deployment, with Edge Functions for fast, location-aware responses.
+- Next.js dynamic imports and code splitting are used for performance.
+
+## References
+- [PROJECT_DESCRIPTION.md](mdc:PROJECT_DESCRIPTION.md)
+- [DEV_PLAN.md](mdc:DEV_PLAN.md)
+
+---
+
+**All code LLMs and contributors should use and extend this tech stack as described.**

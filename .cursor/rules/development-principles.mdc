@@ -1,0 +1,83 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Development Principles & Best Practices for "Terrasse au Soleil"
+
+This project is a Next.js 15 App Router application focused on geospatial data visualization, beautiful UI, and high performance. All code contributions must adhere to the following principles:
+
+## 1. Next.js 15 App Router Paradigm
+- Use React Server Components (RSC) by default for data fetching and static rendering.
+- Use `'use client'` only for components requiring interactivity or browser APIs.
+- Organize routes logically in `app/`, using Route Groups for structure.
+- Implement API endpoints in `app/api/` as Route Handlers.
+- Use `loading.js` and `error.js` for Suspense and error boundaries.
+
+## 2. Modular, Reusable Component Architecture
+- Follow atomic/component-driven design: 
+  - `components/ui/` for base UI elements (Button, Card, Input, etc.)
+  - `components/{feature}/` for feature-specific composites (map, controls, terraces)
+- Define clear, explicit prop interfaces. Prefer composition over inheritance.
+- Encapsulate logic and styling within components.
+
+## 3. State Management
+- Fetch data in Server Components when possible.
+- Use URL parameters for app state (date, time, map view, selection).
+- Use React Context (`contexts/`) for global state only when necessary.
+- Use SWR for client-side data fetching and caching.
+
+## 4. Styling & Design System
+- Use Tailwind CSS utilities for all styling. Avoid custom CSS unless necessary.
+- Adhere strictly to the design tokens (colors, spacing, typography) defined in the design system.
+- Use `tailwind-merge` for conditional class merging.
+- Co-locate custom styles with their components if needed.
+
+## 5. Map Integration
+- Encapsulate MapLibre GL logic in `lib/hooks/useMap.js` and `components/map/`.
+- Use GeoJSON for map data and Supercluster for clustering.
+- Dynamically import heavy map components to optimize load.
+
+## 6. Performance
+- Minimize client bundle size by maximizing Server Component usage.
+- Use dynamic imports for large or non-critical components.
+- Optimize animations (Framer Motion, CSS transitions) for 60fps.
+- Use SWR and efficient queries for data fetching.
+- Use `next/image` for image optimization.
+
+## 7. Code Quality & Consistency
+- Enforce ESLint and Prettier for code style.
+- Use consistent naming conventions (PascalCase for components, camelCase for variables).
+- Write clear, concise code. Comment only for complex logic.
+- All code must be reviewed before merging.
+
+## 8. Accessibility
+- Use semantic HTML and ARIA roles where needed.
+- Ensure keyboard navigation and focus management.
+- Maintain color contrast per WCAG AA.
+- Test with screen readers.
+
+## 9. Testing
+- Follow the testing strategy in [DEV_PLAN.md](mdc:DEV_PLAN.md): unit, integration, visual, performance, accessibility.
+- Prioritize tests for critical flows and edge cases.
+
+## 10. Debugging Best Practices
+
+- Focus exclusively on the issue or bug at hand; do not make unrelated changes.
+- Avoid modifying parts of the codebase that are working as intended—minimize the scope of your edits.
+- Do not perform mass refactoring or large-scale changes unless absolutely necessary to resolve the bug.
+- When fixing bugs, make the smallest, safest change possible to address the root cause.
+- Clearly isolate and document the bug and your fix in comments if the context is ambiguous.
+- Suggest and implement code changes that improve error handling, logging, and test coverage related to the bug.
+- Add or improve error boundaries, fallback UI, and clear error messages in both Server and Client Components as needed.
+- Propose regression/unit tests for any bug fixes or complex logic to prevent future regressions.
+- When encountering ambiguous or unclear code, add comments or request clarification from human developers.
+- Do not reference tools (like DevTools or browser-based debugging) that are unavailable to code LLMs; focus on code-level diagnostics and improvements.
+
+## References
+- [PROJECT_DESCRIPTION.md](mdc:PROJECT_DESCRIPTION.md)
+- [DEV_PLAN.md](mdc:DEV_PLAN.md)
+
+---
+
+**All code LLMs and contributors must follow these rules to ensure a clean, maintainable, and beautiful codebase.**
