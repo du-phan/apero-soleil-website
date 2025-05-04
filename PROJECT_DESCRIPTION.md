@@ -26,7 +26,7 @@ The application will use a pre-computed sunlight dataset (~700k rows) stored on 
 - `is_sunlit` (boolean indicating sun presence)
 - Additional metadata fields for calculations (sun altitude, azimuth, etc.)
 
-For testing and development purposes, use the sample dataset in `/sample_data/sunlight_results_20250504_142712.csv`
+For testing and development purposes, use the sample geojson dataset in `/src/data/`
 
 ## 🎨 DESIGN PRINCIPLES
 

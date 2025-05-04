@@ -1,103 +1,130 @@
-import Image from "next/image";
+"use client";
+
+import React from "react";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
+import Container from "@/components/layout/Container";
+import { Card } from "@/components/ui/Card";
+import DateControl from "@/components/controls/DateControl";
+import TimeControl from "@/components/controls/TimeControl";
+import TerraceInfoCard from "@/components/terraces/TerraceInfoCard";
+import { useTime } from "@/contexts/TimeContext";
+import { Button } from "@/components/ui/Button";
+import SearchBar from "@/components/controls/SearchBar";
+import MapView from "@/components/map/MapView";
+import useSWR from "swr";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+export type Terrace = {
+  id: string;
+  lat: number;
+  lon: number;
+  address: string;
+  isSunlit: boolean;
+};
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const { formattedDate, currentTime, resetToNow } = useTime();
+  const [sunlitOnly, setSunlitOnly] = React.useState(false);
+  const [selectedTerraceId, setSelectedTerraceId] = React.useState<
+    string | null
+  >(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
+  // Fetch terrace data from API
+  const { data: terraces = [], isLoading } = useSWR<Terrace[]>(
+    `/api/terraces?date=${formattedDate}&time=${currentTime}`,
+    fetcher
+  );
+
+  const filteredTerraces = sunlitOnly
+    ? terraces.filter((t) => t.isSunlit)
+    : terraces;
+  const sunnyTerraceCount = terraces.filter(
+    (terrace) => terrace.isSunlit
+  ).length;
+  const selectedTerrace = selectedTerraceId
+    ? terraces.find((t) => t.id === selectedTerraceId)
+    : null;
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <Header />
+      <main className="flex-1 flex flex-col">
+        <Container className="pt-4 pb-2 flex flex-col gap-2">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+            <div className="flex flex-row gap-2 items-center">
+              <DateControl />
+              <TimeControl />
+              <Button variant="secondary" size="sm" onClick={resetToNow}>
+                Now
+              </Button>
+            </div>
+            <div className="flex flex-row gap-2 items-center">
+              <label className="flex items-center gap-1 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={sunlitOnly}
+                  onChange={() => setSunlitOnly(!sunlitOnly)}
+                  className="accent-amber-500"
+                />
+                <span className="text-sm text-slate-700">Sunlit only</span>
+              </label>
+            </div>
+          </div>
+        </Container>
+        <Container className="pb-4">
+          <SearchBar terraces={filteredTerraces} />
+        </Container>
+        {/* Main content with map */}
+        <Container className="flex-grow pb-8" fullWidth>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-2 h-[calc(100vh-400px)] min-h-[500px]">
+              <MapView
+                terraces={filteredTerraces}
+                isLoading={isLoading}
+                onSelectTerrace={setSelectedTerraceId}
+              />
+            </div>
+            <div className="h-[calc(100vh-400px)] min-h-[500px] overflow-y-auto">
+              {selectedTerrace ? (
+                <TerraceInfoCard
+                  terrace={selectedTerrace}
+                  onClose={() => setSelectedTerraceId(null)}
+                />
+              ) : (
+                <Card className="h-full p-6 flex flex-col items-center justify-center">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="w-12 h-12 text-amber-500 mb-4"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"
+                    />
+                  </svg>
+                  <h3 className="text-xl font-medium text-slate-800 mb-2">
+                    No terrace selected
+                  </h3>
+                  <p className="text-slate-600 text-center mb-4">
+                    Click on a terrace marker on the map to see detailed
+                    information about it.
+                  </p>
+                  <p className="text-amber-700 font-medium">
+                    {sunnyTerraceCount} sunny terraces available
+                  </p>
+                </Card>
+              )}
+            </div>
+          </div>
+        </Container>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      <Footer />
     </div>
   );
 }

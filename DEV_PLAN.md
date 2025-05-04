@@ -16,7 +16,7 @@ This development plan outlines the implementation strategy for the "Terrasse au 
   - **Marker Clustering**: Supercluster for efficient point clustering
   - **Geocoding**: Mapbox Geocoding API for search functionality
 - **State Management**: React Context API + SWR for data fetching
-- **Data Storage**: Direct CSV parsing during development, Supabase with PostGIS (final integration)
+- **Data Storage**: Direct GeoJSON usage for terrace data during development, Supabase with PostGIS (final integration)
 - **Deployment**: Vercel with Edge Functions
 
 ### Key Dependencies
@@ -32,8 +32,11 @@ This development plan outlines the implementation strategy for the "Terrasse au 
 
 ## 📐 Project Structure
 
+Under our `apero-soleil-website` folder:
+
 ```
-/
+public/
+src/
 ├── app/                      # Next.js App Router
 │   ├── api/                  # API routes
 │   │   ├── terraces/         # Terrace data endpoints
@@ -88,8 +91,7 @@ This development plan outlines the implementation strategy for the "Terrasse au 
 │   │   ├── useTerraces.js    # Terrace data hook
 │   │   └── useTime.js        # Time/date management hook
 │   ├── data/                 # Data processing utilities
-│   │   ├── csvParser.js      # CSV parsing functions
-│   │   ├── geoJson.js        # GeoJSON conversion utils
+│   │   ├── geoJson.js        # GeoJSON utilities and helpers
 │   │   └── dataTransformers.js # Data transformation helpers
 │   ├── mapUtils/             # Map utility functions
 │   │   ├── clustering.js     # Marker clustering utilities
@@ -100,15 +102,11 @@ This development plan outlines the implementation strategy for the "Terrasse au 
 │       ├── sunPosition.js    # Solar position calculations
 │       ├── sunTimeline.js    # Timeline generation
 │       └── rayTracing.js     # Light ray visualization
-├── public/                   # Static assets
-│   ├── icons/                # Application icons
-│   ├── images/               # General images
-│   └── map-styles/           # Custom map styles
 ├── styles/                   # Global styles
 │   ├── globals.css           # Global CSS
 │   └── tailwind.css          # Tailwind entry point
 ├── data/                     # Sample data (development)
-│   └── sunlight_results_20250504_142712.csv  # Sample sunshine data
+│   └── sunlight_results_XXX.geojson  # Sample terrace data in GeoJSON format
 └── contexts/                 # React Context providers
     ├── MapContext.jsx        # Map state context
     ├── TimeContext.jsx       # Time control context
@@ -219,31 +217,31 @@ Create a central state management system using React Context API to handle:
 
 #### 1. Core Layout (Days 1-2)
 
-- Root layout with metadata and analytics setup
-- Responsive container layout with mobile breakpoints
-- Main app structure with header and footer
-- Initial page routes setup
+- ✅ Root layout with metadata and analytics setup
+- ✅ Responsive container layout with mobile breakpoints
+- ✅ Main app structure with header and footer
+- ✅ Initial page routes setup
 
-#### 2. CSV Data Service (Days 2-3)
+#### 2. GeoJSON Data Service (Days 2-3)
 
-- Create CSV parser utility for the sample data
-- Implement data access layer to read directly from CSV
-- Define data transformation functions for app consumption
+- ✅ Prepare sample terrace data in GeoJSON format
+- ✅ Implement data access layer to read directly from GeoJSON
+- ✅ Define data transformation functions for app consumption
 - Set up in-memory caching for efficient data access
 
 #### 3. Map Component (Days 3-5)
 
-- Basic MapLibre GL integration
-- Custom map styling based on design
-- Initial map view configuration (Le Marais)
-- Map controls (zoom, pan)
-- Basic marker rendering
+- ✅ Basic MapLibre GL integration
+- ✅ Custom map styling based on design
+- ✅ Initial map view configuration (Le Marais)
+- ✅ Map controls (zoom, pan)
+- ✅ Basic marker rendering
 
 #### 4. Basic UI Elements (Days 5-7)
 
-- Header component with navigation
-- Footer component with attribution
-- Core UI components library (buttons, inputs)
+- ✅ Header component with navigation
+- ✅ Footer component with attribution
+- ✅ Core UI components library (buttons, inputs)
 - Loading states and error handling
 - Responsive layout adjustments
 
@@ -251,33 +249,33 @@ Create a central state management system using React Context API to handle:
 
 #### 5. Terrace Visualization (Days 8-10)
 
-- Terrace marker component with conditional styling
-- Differentiated sunny/shaded markers
-- Basic clustering implementation
+- ✅ Terrace marker component with conditional styling
+- ✅ Differentiated sunny/shaded markers
+- ✅ Basic clustering implementation
 - Popup component for terrace info
 - Le Marais points of interest
 
 #### 6. Time Controls (Days 10-12)
 
-- Time slider component with draggable interface
-- Date selector component with calendar
+- ✅ Time slider component with draggable interface
+- ✅ Date selector component with calendar
 - "Now" button functionality
-- Time period visualization with sun indicators
-- Time update handling for map display
+- ✅ Time period visualization with sun indicators
+- ✅ Time update handling for map display
 
 #### 7. Terrace Information (Days 12-14)
 
-- Terrace detail card with address and status
-- Sunshine timeline component showing periods
-- Basic information display with time-aware content
-- Card transitions and animations
+- ✅ Terrace detail card with address and status
+- ✅ Sunshine timeline component showing periods
+- ✅ Basic information display with time-aware content
+- ✅ Card transitions and animations
 
 #### 8. Search Functionality (Days 14-16)
 
-- Search input component with autocomplete
+- ✅ Search input component with autocomplete
 - Geocoding integration for locations
-- Search results display with prioritization
-- Map navigation on search selection
+- ✅ Search results display with prioritization
+- ✅ Map navigation on search selection
 - Recent searches storage
 
 ### Phase 3: Solar Flare Effect Implementation
@@ -392,43 +390,47 @@ Create a central state management system using React Context API to handle:
 
 ### Terrace Data Structure
 
-Based on the sample data (`sunlight_results_20250504_142712.csv`), each terrace record contains:
+Terrace data is now provided directly in [GeoJSON](https://geojson.org/) format. Each terrace is represented as a GeoJSON Feature with properties such as:
 
 ```
 {
-  terrace_id: string,         // e.g., "21 RUE FRANCOIS MIRON, 75004"
-  terrace_lat: number,        // Latitude (e.g., 48.855649643100065)
-  terrace_lon: number,        // Longitude (e.g., 2.3572601351159532)
-  date: string,               // ISO date (e.g., "2025-05-12")
-  time_slot: string,          // Time in HH:MM format (e.g., "10:00")
-  is_sunlit: boolean,         // Whether terrace is in sunshine
-  sun_altitude: number,       // Sun's altitude in degrees
-  sun_azimuth: number,        // Sun's azimuth in degrees
-  h_terrace: number,          // Terrace height
-  distance_to_obstacle: number, // (optional) Distance to obstruction
-  obstruction_height: number, // (optional) Height of obstruction
-  ray_height_at_obstacle: number, // (optional) Ray height at obstacle
-  obstruction_lat: number,    // (optional) Obstruction latitude
-  obstruction_lon: number     // (optional) Obstruction longitude
+  "type": "Feature",
+  "geometry": {
+    "type": "Point",
+    "coordinates": [2.3572601351159532, 48.855649643100065]
+  },
+  "properties": {
+    "terrace_id": "21 RUE FRANCOIS MIRON, 75004",
+    "date": "2025-05-12",
+    "time_slot": "10:00",
+    "is_sunlit": true,
+    "sun_altitude": 35.2,
+    "sun_azimuth": 120.5,
+    "h_terrace": 1.2,
+    "distance_to_obstacle": 5.0, // optional
+    "obstruction_height": 2.0,   // optional
+    "ray_height_at_obstacle": 1.1, // optional
+    "obstruction_lat": 48.8557,  // optional
+    "obstruction_lon": 2.3573    // optional
+  }
 }
 ```
 
 ### Development Phase
 
-1. **Direct CSV Parsing**:
+1. **Direct GeoJSON Usage**:
 
-   - Read the CSV file directly using `csv-parser`
-   - Implement streaming processing for efficient memory usage
-   - Create indexed access patterns for quick lookups
+   - Read the GeoJSON file directly for terrace data
+   - Implement efficient access patterns for quick lookups and filtering
 
 2. **Data Access Layer**:
 
-   - Build API routes that read from CSV file
+   - Build API routes that read from GeoJSON file
    - Implement filtering by location, time, and sunshine status
    - Create in-memory caching for frequent queries
 
 3. **Data Transformation**:
-   - Convert terrace data to GeoJSON for map visualization
+   - Use GeoJSON directly for map visualization
    - Create time-series data structures for timeline visualization
    - Aggregate sunshine data for heat indicators
 
@@ -445,7 +447,7 @@ Based on the sample data (`sunlight_results_20250504_142712.csv`), each terrace 
 
 ### Production Integration (Post-MVP)
 
-- Migrate from local CSV to Supabase with PostGIS
+- Migrate from local GeoJSON to Supabase with PostGIS
 - Implement spatial queries using PostGIS `ST_DWithin`
 - Set up efficient caching strategies with SWR
 - Implement incremental static regeneration for common queries
@@ -624,7 +626,7 @@ The Solar Flare effect will be implemented in stages, following these detailed t
 
 - Project setup and repository configuration
 - Core layout and UI component implementation
-- CSV data parsing and basic API endpoints
+- GeoJSON data loading and basic API endpoints
 - Initial map integration with styling
 
 ### Week 2: Core Functionality (Days 8-14)
