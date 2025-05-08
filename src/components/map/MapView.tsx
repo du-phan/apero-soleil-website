@@ -1,18 +1,35 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
-import maplibregl, { Map, LngLatLike, MapLayerMouseEvent } from "maplibre-gl";
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import maplibregl, {
+  Map,
+  LngLatLike,
+  MapLayerMouseEvent,
+  LngLatBounds,
+} from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Terrace } from "@/app/page";
 
 const MAP_STYLE = "/map-styles/paris-light.json";
 const INITIAL_CENTER: [number, number] = [2.3622, 48.859]; // Le Marais
 const INITIAL_ZOOM = 15;
+const SOURCE_ID = "terraces";
+
+// Debounce utility (moved to top-level)
+function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  const debounced = (...args: Parameters<F>) => {
+    if (timeout !== null) {
+      clearTimeout(timeout);
+      timeout = null;
+    }
+    timeout = setTimeout(() => func(...args), waitFor);
+  };
+  return debounced as (...args: Parameters<F>) => ReturnType<F>;
+}
 
 interface MapViewProps {
-  terraces: Terrace[];
-  onSelectTerrace?: (terraceId: string) => void;
-  isLoading?: boolean;
+  currentTimeKey: string;
 }
 
 function terracesToGeoJSON(terraces: Terrace[]): GeoJSON.FeatureCollection {
@@ -33,167 +50,172 @@ function terracesToGeoJSON(terraces: Terrace[]): GeoJSON.FeatureCollection {
   };
 }
 
-export default function MapView({
-  terraces,
-  onSelectTerrace,
-  isLoading,
-}: MapViewProps) {
-  const mapContainer = useRef<HTMLDivElement | null>(null);
+const MapView: React.FC<MapViewProps> = ({ currentTimeKey }) => {
+  const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<Map | null>(null);
-  const sourceId = "terraces";
+  const [terraces, setTerraces] = useState<Terrace[]>([]);
+  const [loading, setLoading] = useState(false);
 
+  // Fetch terraces for the current bounds and time
+  const fetchTerraces = useCallback(
+    async (bounds: LngLatBounds, timeKey: string) => {
+      setLoading(true);
+      const sw = bounds.getSouthWest();
+      const ne = bounds.getNorthEast();
+      const params = new URLSearchParams({
+        time: timeKey,
+        swLng: sw.lng.toString(),
+        swLat: sw.lat.toString(),
+        neLng: ne.lng.toString(),
+        neLat: ne.lat.toString(),
+      });
+      const res = await fetch(`/api/terraces?${params.toString()}`);
+      const data = await res.json();
+      setTerraces(data);
+      setLoading(false);
+      return data;
+    },
+    []
+  );
+
+  // Debounced fetch for map move/zoom
+  const debouncedFetchTerraces = useCallback(
+    debounce((bounds: LngLatBounds, timeKey: string) => {
+      fetchTerraces(bounds, timeKey).then((data) => {
+        // Update map source if map is ready
+        if (mapRef.current && mapRef.current.getSource(SOURCE_ID)) {
+          const geojson = terracesToGeoJSON(data);
+          (
+            mapRef.current.getSource(SOURCE_ID) as maplibregl.GeoJSONSource
+          ).setData(geojson);
+        }
+      });
+    }, 400),
+    [fetchTerraces]
+  );
+
+  // Initialize map
   useEffect(() => {
     if (!mapContainer.current) return;
-    if (mapRef.current) return;
+    if (mapRef.current) return; // Prevent double init
 
     const map = new maplibregl.Map({
       container: mapContainer.current,
       style: MAP_STYLE,
-      center: INITIAL_CENTER as LngLatLike,
+      center: INITIAL_CENTER,
       zoom: INITIAL_ZOOM,
-      attributionControl: true as any, // Acceptable for MapLibre
+      attributionControl: true,
     });
     mapRef.current = map;
 
-    map.addControl(
-      new maplibregl.NavigationControl({ showCompass: false }),
-      "top-right"
-    );
+    map.on("load", async () => {
+      // Initial fetch for visible bounds
+      const bounds = map.getBounds();
+      const data = await fetchTerraces(bounds, currentTimeKey);
+      const geojson = terracesToGeoJSON(data);
 
-    map.on("load", () => {
-      // Add terrace source and layer
-      map.addSource(sourceId, {
+      map.addSource(SOURCE_ID, {
         type: "geojson",
-        data: terracesToGeoJSON(terraces),
-        cluster: terraces.length > 1000,
-        clusterMaxZoom: 16,
+        data: geojson,
+        cluster: true,
+        clusterMaxZoom: 13,
         clusterRadius: 40,
       });
 
-      if (terraces.length > 1000) {
-        map.addLayer({
-          id: "clusters",
-          type: "circle",
-          source: sourceId,
-          filter: ["has", "point_count"],
-          paint: {
-            "circle-color": [
-              "step",
-              ["get", "point_count"],
-              "#F9A825",
-              10,
-              "#FFD54F",
-              50,
-              "#F57F17",
-            ],
-            "circle-radius": [
-              "step",
-              ["get", "point_count"],
-              16,
-              10,
-              24,
-              50,
-              32,
-            ],
-            "circle-stroke-width": 2,
-            "circle-stroke-color": "#fff",
-          },
-        });
-        map.addLayer({
-          id: "cluster-count",
-          type: "symbol",
-          source: sourceId,
-          filter: ["has", "point_count"],
-          layout: {
-            "text-field": "{point_count_abbreviated}",
-            "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
-            "text-size": 14,
-          },
-          paint: {
-            "text-color": "#1A2C42",
-          },
-        });
-      }
-
-      // Add terrace points as a circle layer (no image needed)
+      // Cluster circles
       map.addLayer({
-        id: "terrace-points",
+        id: "clusters",
         type: "circle",
-        source: sourceId,
-        filter: ["!", ["has", "point_count"]],
+        source: SOURCE_ID,
+        filter: ["has", "point_count"],
         paint: {
-          "circle-radius": ["case", ["==", ["get", "isSunlit"], true], 9, 7],
           "circle-color": [
-            "case",
-            ["==", ["get", "isSunlit"], true],
-            "#F9A825", // sunlit: gold
-            "#CBD5E1", // unlit: slate-200
+            "step",
+            ["get", "point_count"],
+            "#F9A825",
+            20,
+            "#FFB300",
+            100,
+            "#FF7043",
+          ],
+          "circle-radius": [
+            "step",
+            ["get", "point_count"],
+            18,
+            20,
+            26,
+            100,
+            34,
           ],
           "circle-stroke-width": 2,
           "circle-stroke-color": "#fff",
         },
       });
 
-      map.on("click", "terrace-points", (e: MapLayerMouseEvent) => {
-        if (e.features && e.features.length > 0) {
-          const feature = e.features[0];
-          if (onSelectTerrace && feature.properties && feature.properties.id) {
-            onSelectTerrace(feature.properties.id as string);
-          }
-        }
+      // Cluster count labels
+      map.addLayer({
+        id: "cluster-count",
+        type: "symbol",
+        source: SOURCE_ID,
+        filter: ["has", "point_count"],
+        layout: {
+          "text-field": "{point_count_abbreviated}",
+          "text-font": ["Noto Sans Regular"],
+          "text-size": 18,
+        },
+        paint: {
+          "text-color": "#22292f",
+          "text-halo-color": "#fff",
+          "text-halo-width": 3,
+        },
       });
 
-      map.on("mouseenter", "terrace-points", () => {
-        map.getCanvas().style.cursor = "pointer";
+      // Unclustered terrace points
+      map.addLayer({
+        id: "unclustered-point",
+        type: "circle",
+        source: SOURCE_ID,
+        filter: ["!has", "point_count"],
+        paint: {
+          "circle-color": [
+            "case",
+            ["==", ["get", "isSunlit"], true],
+            "#F9A825",
+            "#607D8B",
+          ],
+          "circle-radius": 8,
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "#fff",
+        },
       });
-      map.on("mouseleave", "terrace-points", () => {
-        map.getCanvas().style.cursor = "";
-      });
+    });
+
+    // On map move/zoom, fetch new data for bounds
+    map.on("moveend", () => {
+      if (!mapRef.current) return;
+      const bounds = mapRef.current.getBounds();
+      debouncedFetchTerraces(bounds, currentTimeKey);
     });
 
     return () => {
       map.remove();
       mapRef.current = null;
     };
-  }, [onSelectTerrace, terraces]);
+  }, [currentTimeKey, fetchTerraces, debouncedFetchTerraces]);
 
-  // Update terrace markers when terraces prop changes
+  // Refetch data if time changes
   useEffect(() => {
     if (!mapRef.current) return;
-    const map = mapRef.current;
-    if (map.isStyleLoaded() && map.getSource(sourceId)) {
-      const source = map.getSource(sourceId) as maplibregl.GeoJSONSource;
-      source.setData(terracesToGeoJSON(terraces));
-    }
-  }, [terraces]);
+    const bounds = mapRef.current.getBounds();
+    debouncedFetchTerraces(bounds, currentTimeKey);
+  }, [currentTimeKey, debouncedFetchTerraces]);
 
   return (
-    <div className="relative w-full h-full rounded-lg shadow overflow-hidden">
-      <div ref={mapContainer} className="w-full h-full" />
-      {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-white/60 z-10">
-          <svg
-            className="animate-spin h-8 w-8 text-amber-500"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            />
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v8z"
-            />
-          </svg>
-        </div>
-      )}
-    </div>
+    <div
+      ref={mapContainer}
+      className="w-full h-full rounded-lg shadow overflow-hidden"
+    />
   );
-}
+};
+
+export default MapView;
