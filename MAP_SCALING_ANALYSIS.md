@@ -137,3 +137,85 @@ The primary bottleneck was the inefficient, redundant data structure. Restructur
 - Effective implementation of viewport-based data fetching on the frontend.
 
 Combined with refined client-side clustering in MapLibre, this strategy provides a performant and scalable solution for visualizing 30,000+ terraces without the immediate need for complex server-side tiling infrastructure. Future scaling can be addressed with options like PMTiles if necessary. Enhancing the user journey with filtering options should also be considered.
+
+## 8. Achieving a Smooth, Slick Time Slider and Map Experience
+
+### Background
+
+The previous implementation reloaded all terrace data from the server and replaced the entire marker source on every time slider change, even though terrace locations are static and only the sunlit status changes. This led to unnecessary network requests, UI jank, and a poor user experience. The optimized data structure (one feature per terrace, with all time slots as properties) enables a much more efficient approach.
+
+---
+
+### Improved Implementation Plan
+
+#### 1. Data Loading Strategy
+
+- **Initial Load:** On first map load (or when the viewport changes significantly), fetch all terrace features for the current viewport. Each feature should include all time slot properties (e.g., `t0900`, `t0930`, ...).
+- **Client-Side State:** Store the full set of visible terrace features (with all time slots) in React state or a SWR cache.
+- **Prune Memory:** If the user pans/zooms, prune features that are no longer in the viewport from client state to avoid memory bloat.
+
+#### 2. Time Slider Interaction
+
+- **No Network Requests on Time Change:** When the user moves the time slider, do **not** refetch terrace data from the server. Instead, update the sunlit status for each terrace client-side by looking up the relevant time property (e.g., `feature.properties[currentTimeKey]`).
+- **Efficient Marker Update:** Preferably use MapLibre's `setFeatureState` to update only the `isSunlit` property for each feature, avoiding a full source replacement. If not feasible, update the `isSunlit` property in the GeoJSON and call `setData()` on the source.
+
+#### 3. Animation and Visual Feedback
+
+- **Animate Marker Color Changes:** Use CSS transitions or animation libraries (e.g., framer-motion) to animate marker color changes for a visually smooth experience.
+- **Optional Sun Sweep Effect:** For extra polish, animate a "sweep" effect across the map as the sun moves (see DEV_PLAN.md for inspiration). NOT FOR THIS VERSION.
+
+#### 4. Debouncing and User Experience
+
+- **Debounce Slider Updates:** Debounce the time slider's `onChange` handler to avoid excessive updates during rapid dragging.
+- **Update on Mouse Up:** Optionally, update only on `onMouseUp` for the slider for even less jank.
+- **Loading Indicators:** Show a subtle loading indicator or skeleton markers only on initial data load or viewport change, not on every time change. Optionally, keep previous data visible until new data is ready, then crossfade.
+
+#### 5. Accessibility and Mobile
+
+- **Touch-Friendly and Accessible:** Ensure the slider is touch-friendly and accessible (ARIA roles, keyboard navigation).
+- **Colorblind Support:** Make sure marker color changes are perceivable for colorblind users (add a shape or icon for sunlit status).
+
+#### 6. Error Handling
+
+- **Graceful Errors:** If the initial data fetch fails, provide a clear error message and a retry option.
+
+#### 7. Scalability and Fallbacks
+
+- **Large Viewports:** If the viewport is very large (e.g., zoomed out to all of Paris), limit the number of features loaded or use clustering/vector tiles to avoid performance issues.
+- **Progressive Loading:** Optionally, load only the most relevant time slots initially and lazy-load others if the user scrubs the slider far from the initial time.
+
+---
+
+### Example Pseudocode
+
+```js
+// On initial load or viewport change:
+const [terraces, setTerraces] = useState<FullTerraceFeature[]>([]);
+fetchTerracesForViewport().then(setTerraces);
+
+// On time slider change:
+function handleTimeChange(newTimeKey) {
+  terraces.forEach(f => {
+    map.setFeatureState({ source: 'terraces', id: f.id }, { isSunlit: f.properties[newTimeKey] });
+  });
+}
+```
+
+---
+
+### Summary Table: Before vs. After
+
+| Aspect                    | Before (Current)     | After (Proposed)        |
+| ------------------------- | -------------------- | ----------------------- |
+| Data fetch on time change | Yes                  | No                      |
+| Marker update             | Replace all features | Update only color/state |
+| Request cancellation      | No                   | Not needed              |
+| Error on rapid slider     | Yes                  | No                      |
+| Smoothness                | Poor                 | Excellent               |
+| Accessibility             | Not guaranteed       | Explicitly addressed    |
+
+---
+
+### Conclusion
+
+By leveraging the optimized data structure and best practices in client-side state management, feature state updates, animation, and accessibility, the application can deliver a truly smooth, slick, and scalable user experience for time-based terrace sunshine visualization. This approach is robust for thousands of markers and can be further extended for even larger datasets with clustering or vector tiles as needed.

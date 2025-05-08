@@ -15,9 +15,11 @@ export type Terrace = {
   lat: number;
   lon: number;
   address: string;
-  isSunlit: boolean;
+  isSunlit?: boolean; // Will be derived on the client from time slot properties
   sunAzimuth?: number;
   sunAltitude?: number;
+  // Index signature for time slot properties, e.g., t0900, t0930, etc.
+  [key: `t${string}`]: boolean | number | string | undefined;
 };
 
 export default function Home() {
@@ -40,7 +42,6 @@ export default function Home() {
         <Container className="pt-4 pb-2 flex flex-col gap-2">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
             <div className="flex flex-row gap-2 items-center">
-              <DateControl />
               <TimeControl />
               <Button variant="secondary" size="sm" onClick={resetToNow}>
                 Now

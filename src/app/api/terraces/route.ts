@@ -6,19 +6,23 @@ import { parseGeoJson, TerraceFeature } from "@/lib/data/csvParser";
 const allTerraceFeatures: TerraceFeature[] = parseGeoJson();
 
 // Define the structure for a terrace in our API response
+// This should now align with the main Terrace type which includes all time properties
 interface TerraceAPIResponse {
   id: string;
   lat: number;
   lon: number;
   address: string;
-  isSunlit: boolean;
+  // isSunlit is no longer determined by the API directly based on a single timeKey
+  // sunAzimuth and sunAltitude can be included if available in feature.properties
   sunAzimuth?: number;
   sunAltitude?: number;
+  // Index signature to include all time slot properties like t0900, t0930
+  [key: `t${string}`]: boolean | number | string | undefined;
 }
 
-// Helper function to filter terraces based on time and bounding box
+// Helper function to filter terraces based on bounding box
 function getFilteredTerraces(
-  timeKey: string, // e.g., "t1000", "t1030"
+  // timeKey: string, // No longer needed here, client will handle current time
   bounds?: {
     swLng: number;
     swLat: number;
@@ -41,26 +45,33 @@ function getFilteredTerraces(
     });
   }
 
-  // 2. Map to API response format, adding isSunlit based on timeKey
+  // 2. Map to API response format, passing through all properties
   const terraces = featuresToProcess.map((feature) => {
     const [lon, lat] = feature.geometry.coordinates;
     const address = feature.properties.id.includes("demo")
       ? `Demo Terrace #${feature.properties.id.split("-")[1]}`
-      : feature.properties.id; // Use the ID as the address, or format as needed
+      : feature.properties.id;
 
-    const isSunlit = !!feature.properties[timeKey]; // Ensure boolean, true if property exists and is true-thy
-
-    return {
+    // Construct the response object, spreading all properties from the GeoJSON feature
+    // This assumes feature.properties already contains t0900, t0930, etc.
+    const responseTerrace: TerraceAPIResponse = {
       id: feature.properties.id,
       lat: lat,
       lon: lon,
       address: address,
-      isSunlit: isSunlit,
-      // sunAzimuth and sunAltitude are not in the new primary GeoJSON properties by default.
-      // If they were added back to properties, they could be accessed here:
-      // sunAzimuth: feature.properties.sun_azimuth,
-      // sunAltitude: feature.properties.sun_altitude,
+      ...feature.properties, // Spread all properties from the source
     };
+
+    // Ensure core properties are not overwritten by spread if they have different names in source
+    // For example, if source has 'terrace_id' instead of 'id', map explicitly.
+    // Here, we assume 'id' is consistent.
+    // We also delete the original 'id' from the spread properties if it was duplicated,
+    // or ensure the intended 'id' (and lat/lon/address) takes precedence.
+    // The current `TerraceFeature` properties seem to be just 'id' and time keys.
+    // If `feature.properties` has a conflicting `lat`, `lon`, or `address`, this needs careful handling.
+    // Assuming `feature.properties` primarily contains `id` and `tXXXX` keys.
+
+    return responseTerrace;
   });
 
   return terraces;
@@ -70,9 +81,8 @@ function getFilteredTerraces(
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
 
-  // Get time parameter (e.g., "t1000", "t1030")
-  // Client should format this from a Date object or time picker
-  const timeKey = searchParams.get("time"); // Example: "t1000"
+  // Get time parameter - NO LONGER USED FOR FILTERING HERE
+  // const timeKey = searchParams.get("time");
 
   // Get bounding box parameters
   const swLngParam = searchParams.get("swLng");
@@ -81,19 +91,19 @@ export async function GET(request: NextRequest) {
   const neLatParam = searchParams.get("neLat");
 
   console.log(
-    `[API] Request parameters - timeKey: ${timeKey}, bounds: ${swLngParam},${swLatParam} to ${neLngParam},${neLatParam}`
+    `[API] Request parameters - bounds: ${swLngParam},${swLatParam} to ${neLngParam},${neLatParam}` // Removed timeKey from log
   );
 
-  // Validate required timeKey
-  if (!timeKey || !timeKey.startsWith("t")) {
-    console.error(`[API] Invalid time parameter: ${timeKey}`);
-    return NextResponse.json(
-      {
-        error: 'Invalid or missing "time" parameter. Expected format: "tHHMM"',
-      },
-      { status: 400 }
-    );
-  }
+  // Validate required timeKey - NO LONGER REQUIRED
+  // if (!timeKey || !timeKey.startsWith("t")) {
+  //   console.error(`[API] Invalid time parameter: ${timeKey}`);
+  //   return NextResponse.json(
+  //     {
+  //       error: 'Invalid or missing "time" parameter. Expected format: "tHHMM"',
+  //     },
+  //     { status: 400 }
+  //   );
+  // }
 
   let bounds;
   if (swLngParam && swLatParam && neLngParam && neLatParam) {
@@ -117,7 +127,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const terraces = getFilteredTerraces(timeKey, bounds);
+  const terraces = getFilteredTerraces(bounds); // Removed timeKey argument
 
   // Note: The 'limit' parameter from the original code is not used here as
   // viewport filtering is the primary mechanism. If needed, it could be added back
