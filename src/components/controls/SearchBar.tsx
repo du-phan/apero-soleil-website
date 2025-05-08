@@ -133,7 +133,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     <div
       className={
         `relative ${className} ` +
-        "bg-background/80 backdrop-blur-md rounded-lg shadow-xl border border-border/20 p-3 z-10 w-full"
+        "bg-background/95 backdrop-blur-md rounded-xl shadow-xl border border-white/40 ring-1 ring-white/10 p-3 z-10 w-full"
       }
     >
       <Input
