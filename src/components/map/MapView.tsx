@@ -222,9 +222,22 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
               "#F9A825",
               "#607D8B",
             ],
-            "circle-radius": 8,
+            // Animated properties for sunlit markers (use feature-state)
+            "circle-radius": [
+              "case",
+              ["boolean", ["feature-state", "isSunlit"], false],
+              ["feature-state", "__animated_radius"],
+              10,
+            ],
+            "circle-blur": [
+              "case",
+              ["boolean", ["feature-state", "isSunlit"], false],
+              ["feature-state", "__animated_blur"],
+              0,
+            ],
             "circle-stroke-width": 2,
             "circle-stroke-color": "#fff",
+            "circle-opacity": 1,
           },
         });
       }
@@ -253,11 +266,87 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
       // Optionally, update feature state for unclustered points
       terracesData.forEach((terrace) => {
         const isSunlit = !!terrace[currentTimeKey as keyof Terrace];
+        // Set initial animation state for sunlit markers
         map.setFeatureState(
           { source: SOURCE_ID, id: terrace.id },
-          { isSunlit }
+          isSunlit
+            ? { isSunlit, __animated_radius: 14, __animated_blur: 0.7 }
+            : { isSunlit, __animated_radius: 10, __animated_blur: 0 }
         );
       });
+    }, [terracesData, currentTimeKey]);
+
+    // Animation state for glowing effect
+    const animationRef = useRef<number | null>(null);
+    const animationPhase = useRef<number>(0);
+
+    // Animate sunlit marker glow
+    useEffect(() => {
+      if (!mapRef.current) return;
+      const map = mapRef.current;
+      let running = true;
+
+      function animate() {
+        if (!running) return;
+        animationPhase.current += 0.04; // Speed of pulse
+        const pulse = (Math.sin(animationPhase.current) + 1) / 2; // 0..1
+        // Glow parameters (increased for visibility)
+        const minRadius = 14;
+        const maxRadius = 22;
+        const minBlur = 0.5;
+        const maxBlur = 1.2;
+        const animatedRadius = minRadius + (maxRadius - minRadius) * pulse;
+        const animatedBlur = minBlur + (maxBlur - minBlur) * pulse;
+
+        // For all features, update their feature-state for animation
+        const source = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource & {
+          _data?: any;
+        };
+        const data = source && source._data;
+        if (
+          data &&
+          typeof data === "object" &&
+          data.type === "FeatureCollection" &&
+          Array.isArray(data.features)
+        ) {
+          for (const feature of data.features) {
+            if (
+              feature.properties &&
+              feature.properties.id !== undefined &&
+              feature.properties.isSunlit
+            ) {
+              map.setFeatureState(
+                { source: SOURCE_ID, id: feature.properties.id },
+                {
+                  isSunlit: true,
+                  __animated_radius: animatedRadius,
+                  __animated_blur: animatedBlur,
+                }
+              );
+            } else if (
+              feature.properties &&
+              feature.properties.id !== undefined
+            ) {
+              map.setFeatureState(
+                { source: SOURCE_ID, id: feature.properties.id },
+                {
+                  isSunlit: false,
+                  __animated_radius: 10,
+                  __animated_blur: 0,
+                }
+              );
+            }
+          }
+        }
+        animationRef.current = requestAnimationFrame(animate);
+      }
+      animationRef.current = requestAnimationFrame(animate);
+      return () => {
+        running = false;
+        if (animationRef.current) {
+          cancelAnimationFrame(animationRef.current);
+        }
+      };
     }, [terracesData, currentTimeKey]);
 
     useImperativeHandle(
