@@ -3,7 +3,6 @@
 import React from "react";
 import * as Slider from "@radix-ui/react-slider";
 import { format } from "date-fns";
-import { Card } from "@/components/ui/Card";
 import { useTime } from "@/contexts/TimeContext";
 
 // Generate time slots from 9:00 to 21:00 with 30-minute intervals
@@ -32,14 +31,22 @@ function formatTimeDisplay(timeString: string) {
 
 export const TimeControl: React.FC = () => {
   const { currentTime, setTime } = useTime();
-  const [sliderValue, setSliderValue] = React.useState(
-    sortedTimes.indexOf(currentTime)
-  );
+  // Fallback to 17:00 if currentTime is not in sortedTimes
+  const fallbackTime = "17:00";
+  const initialIndex = sortedTimes.includes(currentTime)
+    ? sortedTimes.indexOf(currentTime)
+    : sortedTimes.indexOf(fallbackTime);
+  const [sliderValue, setSliderValue] = React.useState(initialIndex);
 
-  // Keep slider in sync with context
+  // Keep slider in sync with context, fallback to 19:00 if out of range
   React.useEffect(() => {
-    setSliderValue(sortedTimes.indexOf(currentTime));
-  }, [currentTime]);
+    if (sortedTimes.includes(currentTime)) {
+      setSliderValue(sortedTimes.indexOf(currentTime));
+    } else {
+      setSliderValue(sortedTimes.indexOf(fallbackTime));
+      setTime(fallbackTime);
+    }
+  }, [currentTime, setTime]);
 
   // Debounce setTime for performance
   const debouncedSetTime = React.useRef(
@@ -71,7 +78,7 @@ export const TimeControl: React.FC = () => {
             aria-label="Time of day"
           >
             {/* Track */}
-            <Slider.Track className="bg-slate-300 dark:bg-slate-700 relative grow rounded-full h-2">
+            <Slider.Track className="bg-[#607D8B] relative grow rounded-full h-2">
               <Slider.Range className="absolute bg-amber-400 rounded-full h-2" />
             </Slider.Track>
             {/* Thumb */}
@@ -101,16 +108,16 @@ export const TimeControl: React.FC = () => {
 };
 
 // Debounce utility
-function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
+function debounce(func: (index: number) => void, waitFor: number) {
   let timeout: ReturnType<typeof setTimeout> | null = null;
-  const debounced = (...args: Parameters<F>) => {
+  const debounced = (index: number) => {
     if (timeout !== null) {
       clearTimeout(timeout);
       timeout = null;
     }
-    timeout = setTimeout(() => func(...args), waitFor);
+    timeout = setTimeout(() => func(index), waitFor);
   };
-  return debounced as (...args: Parameters<F>) => ReturnType<F>;
+  return debounced;
 }
 
 export default TimeControl;

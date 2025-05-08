@@ -1,11 +1,5 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  ReactNode,
-  useEffect,
-} from "react";
-import { addMinutes, parseISO, format, isValid } from "date-fns";
+import { createContext, useContext, useState, ReactNode } from "react";
+import { addMinutes, format, isValid } from "date-fns";
 
 interface TimeState {
   currentDate: Date;

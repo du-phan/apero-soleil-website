@@ -1,13 +1,10 @@
 "use client";
 
 import React from "react";
-import { format, isToday } from "date-fns";
+import { format } from "date-fns";
 import { Card } from "@/components/ui/Card";
-import { useTime } from "@/contexts/TimeContext";
 
 export const DateControl: React.FC = () => {
-  const { currentDate } = useTime();
-
   // Get today's date formatted
   const today = new Date();
   const formattedDate = format(today, "EEEE, MMMM d, yyyy"); // e.g., "Monday, May 4, 2025"

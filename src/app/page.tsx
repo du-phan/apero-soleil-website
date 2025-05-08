@@ -1,15 +1,10 @@
 "use client";
 
 import React, { useRef } from "react";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
-import Container from "@/components/layout/Container";
-import DateControl from "@/components/controls/DateControl";
-import TimeControl from "@/components/controls/TimeControl";
-import { useTime } from "@/contexts/TimeContext";
-import { Button } from "@/components/ui/Button";
 import MapView, { MapViewHandle } from "@/components/map/MapView";
 import SearchBar from "@/components/controls/SearchBar";
+import TimeControl from "@/components/controls/TimeControl";
+import { useTime } from "@/contexts/TimeContext";
 
 export type Terrace = {
   id: string;
@@ -24,8 +19,8 @@ export type Terrace = {
 };
 
 export default function Home() {
-  const { formattedDate, currentTime, resetToNow } = useTime();
   const mapRef = useRef<MapViewHandle>(null);
+  const { currentTime } = useTime();
 
   // Format current time to the format expected by the API (tHHMM)
   const formatTimeForAPI = (time: string): string => {

@@ -55,11 +55,11 @@ function getFilteredTerraces(
     // Construct the response object, spreading all properties from the GeoJSON feature
     // This assumes feature.properties already contains t0900, t0930, etc.
     const responseTerrace: TerraceAPIResponse = {
+      ...feature.properties, // Spread all properties from the source first
       id: feature.properties.id,
       lat: lat,
       lon: lon,
       address: address,
-      ...feature.properties, // Spread all properties from the source
     };
 
     // Ensure core properties are not overwritten by spread if they have different names in source

@@ -1,5 +1,5 @@
 import type { TerraceRecord } from "./csvParser";
-import { Terrace } from "@/contexts/TerraceContext";
+import type { Terrace } from "@/app/page";
 
 export interface GeoJsonFeature {
   type: "Feature";
@@ -10,7 +10,7 @@ export interface GeoJsonFeature {
   properties: {
     id: string;
     isSunlit: boolean;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 
@@ -33,24 +33,27 @@ export function terraceRecordsToGeoJson(
     },
     properties: {
       id: record.terrace_id,
-      isSunlit: record.is_sunlit,
-      date: record.date,
-      timeSlot: record.time_slot,
+      isSunlit: record.is_sunlit ?? false,
+      date: record.date ?? "",
+      timeSlot: record.time_slot ?? "",
       sunAltitude: record.sun_altitude,
       sunAzimuth: record.sun_azimuth,
       terraceHeight: record.h_terrace,
-      // Add optional properties if they exist
-      ...(record.distance_to_obstacle && {
+      ...(record.distance_to_obstacle !== undefined && {
         distanceToObstacle: record.distance_to_obstacle,
       }),
-      ...(record.obstruction_height && {
+      ...(record.obstruction_height !== undefined && {
         obstructionHeight: record.obstruction_height,
       }),
-      ...(record.ray_height_at_obstacle && {
+      ...(record.ray_height_at_obstacle !== undefined && {
         rayHeightAtObstacle: record.ray_height_at_obstacle,
       }),
-      ...(record.obstruction_lat && { obstructionLat: record.obstruction_lat }),
-      ...(record.obstruction_lon && { obstructionLon: record.obstruction_lon }),
+      ...(record.obstruction_lat !== undefined && {
+        obstructionLat: record.obstruction_lat,
+      }),
+      ...(record.obstruction_lon !== undefined && {
+        obstructionLon: record.obstruction_lon,
+      }),
     },
   }));
 
@@ -76,10 +79,9 @@ export function groupTerraceRecordsByTimeline(
     if (!terraceTimelines[record.terrace_id]) {
       terraceTimelines[record.terrace_id] = [];
     }
-
     terraceTimelines[record.terrace_id].push({
-      time: record.time_slot,
-      isSunlit: record.is_sunlit,
+      time: record.time_slot ?? "",
+      isSunlit: record.is_sunlit ?? false,
     });
   });
 
@@ -103,16 +105,15 @@ export function createSunshineHeatMap(
 
   // Group records by date and time slot
   records.forEach((record) => {
+    if (!record.date || !record.time_slot) return;
     if (!result[record.date]) {
       result[record.date] = {};
     }
-
     if (!result[record.date][record.time_slot]) {
       result[record.date][record.time_slot] = 0;
     }
-
     if (record.is_sunlit) {
-      result[record.date][record.time_slot]++;
+      result[record.date][record.time_slot]!++;
     }
   });
 
@@ -133,7 +134,7 @@ export function transformTerracesToGeoJson(
     },
     properties: {
       id: terrace.id,
-      isSunlit: terrace.isSunlit,
+      isSunlit: terrace.isSunlit ?? false,
       address: terrace.address,
     },
   }));

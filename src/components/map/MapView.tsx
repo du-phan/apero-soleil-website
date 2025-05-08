@@ -11,25 +11,24 @@ import React, {
 import maplibregl, { Map, LngLatBounds } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Terrace } from "@/app/page";
-import TerraceInfoCard from "@/components/terraces/TerraceInfoCard";
 import { motion, AnimatePresence } from "framer-motion";
 
 const MAP_STYLE = "https://tiles.stadiamaps.com/styles/stamen_toner_lite.json";
-const INITIAL_CENTER: [number, number] = [2.3622, 48.859]; // Le Marais
-const INITIAL_ZOOM = 15;
+const INITIAL_CENTER: [number, number] = [2.377211, 48.8489977]; // Centered on requested coordinate
+const INITIAL_ZOOM = 17;
 const SOURCE_ID = "terraces";
 
 // Debounce utility (moved to top-level)
-function debounce<F extends (...args: any[]) => any>(func: F, waitFor: number) {
+function debounce(func: (bounds: LngLatBounds) => void, waitFor: number) {
   let timeout: ReturnType<typeof setTimeout> | null = null;
-  const debounced = (...args: Parameters<F>) => {
+  const debounced = (bounds: LngLatBounds) => {
     if (timeout !== null) {
       clearTimeout(timeout);
       timeout = null;
     }
-    timeout = setTimeout(() => func(...args), waitFor);
+    timeout = setTimeout(() => func(bounds), waitFor);
   };
-  return debounced as (...args: Parameters<F>) => ReturnType<F>;
+  return debounced;
 }
 
 interface MapViewProps {
@@ -177,11 +176,11 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
               ["linear"],
               ["get", "sunlit_count"],
               1,
-              "#FFE0B2",
+              "rgba(255,224,178,0.85)",
               5,
-              "#FFB300",
+              "rgba(255,179,0,0.85)",
               15,
-              "#FF6F00",
+              "rgba(255,111,0,0.85)",
             ],
             "circle-radius": [
               "step",
@@ -192,8 +191,7 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
               100,
               34,
             ],
-            "circle-stroke-width": 2,
-            "circle-stroke-color": "#fff",
+            "circle-stroke-width": 0,
           },
         });
         // Add cluster count labels
@@ -243,8 +241,18 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
               ["feature-state", "__animated_blur"],
               0,
             ],
-            "circle-stroke-width": 2,
-            "circle-stroke-color": "#fff",
+            "circle-stroke-width": [
+              "case",
+              ["boolean", ["feature-state", "isSunlit"], false],
+              2,
+              0,
+            ],
+            "circle-stroke-color": [
+              "case",
+              ["boolean", ["feature-state", "isSunlit"], false],
+              "#fff",
+              "#fff",
+            ],
             "circle-opacity": 1,
           },
         });
@@ -308,7 +316,7 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
 
         // For all features, update their feature-state for animation
         const source = map.getSource(SOURCE_ID) as maplibregl.GeoJSONSource & {
-          _data?: any;
+          _data?: unknown;
         };
         const data = source && source._data;
         if (
@@ -556,16 +564,25 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
                     {/* Sunshine timeline (minimal, modern) */}
                     <div>
                       <div className="text-xs text-muted-foreground mb-1">
-                        Today's sunshine timeline:
+                        Today&apos;s sunshine timeline:
                       </div>
                       {(() => {
                         const sunPeriods =
-                          Array.isArray((selectedTerrace as any).sunPeriods) &&
-                          (selectedTerrace as any).sunPeriods.length > 0
-                            ? ((selectedTerrace as any).sunPeriods as {
-                                start: string;
-                                end: string;
-                              }[])
+                          Array.isArray(
+                            selectedTerrace as unknown as {
+                              sunPeriods: { start: string; end: string }[];
+                            }
+                          ) &&
+                          (
+                            selectedTerrace as unknown as {
+                              sunPeriods: { start: string; end: string }[];
+                            }
+                          ).sunPeriods.length > 0
+                            ? (
+                                selectedTerrace as unknown as {
+                                  sunPeriods: { start: string; end: string }[];
+                                }
+                              ).sunPeriods
                             : [
                                 { start: "09:00", end: "12:30" },
                                 { start: "14:00", end: "18:30" },
@@ -662,6 +679,8 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
     );
   }
 );
+
+MapView.displayName = "MapView";
 
 export type MapViewHandle = {
   flyTo: (coords: [number, number], zoom?: number) => void;

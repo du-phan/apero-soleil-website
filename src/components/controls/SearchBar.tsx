@@ -13,11 +13,18 @@ interface SearchBarProps {
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 const PARIS_BBOX = "2.2241,48.8156,2.4699,48.9022"; // minLon,minLat,maxLon,maxLat
 
-function debounce<F extends (...args: any[]) => void>(fn: F, delay: number) {
+// Add type for Mapbox feature
+interface MapboxFeature {
+  id: string;
+  place_name: string;
+  center?: [number, number];
+}
+
+function debounce(fn: (value: string) => void, delay: number) {
   let timer: ReturnType<typeof setTimeout> | null = null;
-  return (...args: Parameters<F>) => {
+  return (value: string) => {
     if (timer) clearTimeout(timer);
-    timer = setTimeout(() => fn(...args), delay);
+    timer = setTimeout(() => fn(value), delay);
   };
 }
 
@@ -59,7 +66,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         if (fetchId !== lastFetchId.current) return;
         if (Array.isArray(data.features) && data.features.length > 0) {
           setSearchResults(
-            data.features.map((feature: any) => ({
+            data.features.map((feature: MapboxFeature) => ({
               id: feature.id,
               address: feature.place_name,
               coords: feature.center
@@ -77,7 +84,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           setError(null); // No error, just no results
           return;
         }
-      } catch (err) {
+      } catch {
         setError("Erreur de géocodage Mapbox. Essayez encore.");
         setSearchResults([]);
         setShowResults(true);

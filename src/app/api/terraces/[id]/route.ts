@@ -4,9 +4,9 @@ import { groupTerraceRecordsByTimeline } from "@/lib/data/dataTransformers";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
-  const terraceId = params.id;
+  const { id: terraceId } = await context.params;
 
   if (!terraceId) {
     return NextResponse.json(

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { parseCsv, type TerraceRecord } from "@/lib/data/csvParser";
+import { parseCsv } from "@/lib/data/csvParser";
 import { terraceRecordsToGeoJson } from "@/lib/data/dataTransformers";
 
 // Calculate distance between two points using Haversine formula

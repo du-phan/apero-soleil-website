@@ -5,7 +5,7 @@ import path from "path";
 export interface TerraceFeatureProperties {
   id: string; // Unique identifier for the terrace (e.g., address)
   // Dynamically includes time slots like t0900: boolean, t0930: boolean, etc.
-  [key: string]: any; // Allows for dynamic time slot properties
+  [key: string]: unknown; // Allows for dynamic time slot properties
 }
 
 // New interface for a GeoJSON feature representing a terrace
@@ -17,6 +17,25 @@ export interface TerraceFeature {
   };
   properties: TerraceFeatureProperties;
 }
+
+// Add a type for a terrace record (matching the expected API usage)
+export type TerraceRecord = {
+  terrace_id: string;
+  terrace_lat: number;
+  terrace_lon: number;
+  h_terrace?: number;
+  date?: string;
+  time_slot?: string;
+  is_sunlit?: boolean;
+  sun_altitude?: number;
+  sun_azimuth?: number;
+  distance_to_obstacle?: number;
+  obstruction_height?: number;
+  ray_height_at_obstacle?: number;
+  obstruction_lat?: number;
+  obstruction_lon?: number;
+  [key: string]: unknown;
+};
 
 const GEOJSON_PATH = path.join(
   process.cwd(),
@@ -172,4 +191,37 @@ export function getAvailableTimeSlots(): string[] {
     // and not desired, e.g. key !== 'id' && key !== 'terrace_lat' && key !== 'terrace_lon'
   );
   return timeSlots.sort(); // Sort for consistency
+}
+
+// Helper to convert a TerraceFeature to a TerraceRecord
+function featureToTerraceRecord(feature: TerraceFeature): TerraceRecord {
+  const { id, ...rest } = feature.properties;
+  return {
+    terrace_id: id,
+    terrace_lat: feature.geometry.coordinates[1],
+    terrace_lon: feature.geometry.coordinates[0],
+    ...rest,
+  };
+}
+
+// Returns all terrace records for a given terraceId
+export async function getTerraceRecords(
+  terraceId: string
+): Promise<TerraceRecord[]> {
+  const features = parseGeoJson();
+  return features
+    .filter((f) => f.properties.id === terraceId)
+    .map(featureToTerraceRecord);
+}
+
+// Returns all terrace records, with optional filtering
+export async function parseCsv(options?: {
+  filter?: (record: TerraceRecord) => boolean;
+}): Promise<TerraceRecord[]> {
+  const features = parseGeoJson();
+  let records = features.map(featureToTerraceRecord);
+  if (options?.filter) {
+    records = records.filter(options.filter);
+  }
+  return records;
 }

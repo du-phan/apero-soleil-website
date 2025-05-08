@@ -4,11 +4,15 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Card, CardHeader, CardBody, CardFooter } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Terrace } from "@/contexts/TerraceContext";
+import type { Terrace } from "@/app/page";
 import { useTime } from "@/contexts/TimeContext";
 
+interface TerraceWithSunPeriods extends Terrace {
+  sunPeriods?: { start: string; end: string }[];
+}
+
 interface TerraceInfoCardProps {
-  terrace: Terrace;
+  terrace: TerraceWithSunPeriods;
   className?: string;
   onClose?: () => void; // Optional close handler
 }
@@ -32,7 +36,7 @@ export const TerraceInfoCard: React.FC<TerraceInfoCardProps> = ({
       const period = hour >= 12 ? "PM" : "AM";
       const hour12 = hour % 12 || 12;
       return `${hour12}:${minute.toString().padStart(2, "0")} ${period}`;
-    } catch (error) {
+    } catch {
       return timeString;
     }
   };
@@ -162,22 +166,26 @@ export const TerraceInfoCard: React.FC<TerraceInfoCardProps> = ({
 
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-slate-700">
-              Today's sunshine timeline:
+              Today&apos;s sunshine timeline:
             </h4>
             <div className="grid grid-cols-1 gap-2">
-              {sunPeriods.map((period, index) => (
-                <div
-                  key={index}
-                  className="px-3 py-2 rounded-md bg-amber-50 border border-amber-200"
-                >
-                  <div className="flex justify-between">
-                    <span className="text-amber-700 font-medium">☀️ Sunny</span>
-                    <span className="text-slate-600">
-                      {formatTime(period.start)} - {formatTime(period.end)}
-                    </span>
+              {sunPeriods.map(
+                (period: { start: string; end: string }, index: number) => (
+                  <div
+                    key={index}
+                    className="px-3 py-2 rounded-md bg-amber-50 border border-amber-200"
+                  >
+                    <div className="flex justify-between">
+                      <span className="text-amber-700 font-medium">
+                        ☀️ Sunny
+                      </span>
+                      <span className="text-slate-600">
+                        {formatTime(period.start)} - {formatTime(period.end)}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              )}
 
               {sunPeriods.length === 0 && (
                 <p className="text-sm text-slate-500 italic">
