@@ -4,8 +4,6 @@ interface TerraceMarkerProps {
   x: number; // screen x position
   y: number; // screen y position
   isSunlit: boolean;
-  sunAzimuth?: number; // degrees
-  sunAltitude?: number; // degrees
   selected?: boolean;
   onClick?: () => void;
 }
@@ -48,8 +46,6 @@ const TerraceMarker: React.FC<TerraceMarkerProps> = ({
   x,
   y,
   isSunlit,
-  sunAzimuth,
-  sunAltitude,
   selected = false,
   onClick,
 }) => {
@@ -73,41 +69,6 @@ const TerraceMarker: React.FC<TerraceMarkerProps> = ({
     >
       {/* Inject keyframes for the flare animation */}
       <style>{flareAnimation}</style>
-      {/* Persistent soft glow for sunlit marker using SVG blur filter (commented out for debugging) */}
-      {/*
-      {isSunlit && (
-        <svg
-          width={GLOW_SIZE}
-          height={GLOW_SIZE}
-          viewBox={`0 0 ${GLOW_SIZE} ${GLOW_SIZE}`}
-          style={{
-            position: "absolute",
-            left: -(GLOW_SIZE - SIZE) / 2,
-            top: -(GLOW_SIZE - SIZE) / 2,
-            pointerEvents: "none",
-            zIndex: 1,
-          }}
-        >
-          <defs>
-            <filter id="soft-glow" x="-50%" y="-50%" width="200%" height="200%">
-              <feGaussianBlur stdDeviation="8" result="coloredBlur" />
-              <feMerge>
-                <feMergeNode in="coloredBlur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-          <circle
-            cx={GLOW_SIZE / 2}
-            cy={GLOW_SIZE / 2}
-            r={18}
-            fill="#F9A825"
-            opacity={0.32}
-            filter="url(#soft-glow)"
-          />
-        </svg>
-      )}
-      */}
       {/* Refined Solar Flare Radial Gradient Effect (animated, always on for sunlit) */}
       {isSunlit && (
         <svg

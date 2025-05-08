@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Input } from "@/components/ui/Input";
 import type { Terrace } from "@/app/page";
 
@@ -10,6 +10,17 @@ interface SearchBarProps {
   terraces: Terrace[];
 }
 
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+const PARIS_BBOX = "2.2241,48.8156,2.4699,48.9022"; // minLon,minLat,maxLon,maxLat
+
+function debounce<F extends (...args: any[]) => void>(fn: F, delay: number) {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  return (...args: Parameters<F>) => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
+
 export const SearchBar: React.FC<SearchBarProps> = ({
   className = "",
   flyTo,
@@ -17,40 +28,97 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 }) => {
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<
-    Array<{ id: string; address: string }>
+    Array<{ id: string; address: string; coords?: [number, number] }>
   >([]);
   const [showResults, setShowResults] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const lastFetchId = useRef(0);
+
+  // Debounced search handler
+  const debouncedSearch = useRef(
+    debounce(async (value: string) => {
+      if (value.length < 2) {
+        setSearchResults([]);
+        setShowResults(false);
+        setLoading(false);
+        setError(null);
+        return;
+      }
+      setLoading(true);
+      setError(null);
+      const fetchId = ++lastFetchId.current;
+      try {
+        const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
+          value
+        )}.json?access_token=${MAPBOX_TOKEN}&autocomplete=true&limit=5&language=fr&bbox=${PARIS_BBOX}&types=address,place,locality,neighborhood,poi`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Mapbox error");
+        const data = await res.json();
+        // Only update if this is the latest fetch
+        if (fetchId !== lastFetchId.current) return;
+        if (Array.isArray(data.features) && data.features.length > 0) {
+          setSearchResults(
+            data.features.map((feature: any) => ({
+              id: feature.id,
+              address: feature.place_name,
+              coords: feature.center
+                ? [feature.center[0], feature.center[1]]
+                : undefined,
+            }))
+          );
+          setShowResults(true);
+          setLoading(false);
+          return;
+        } else {
+          setSearchResults([]);
+          setShowResults(true);
+          setLoading(false);
+          setError(null); // No error, just no results
+          return;
+        }
+      } catch (err) {
+        setError("Erreur de géocodage Mapbox. Essayez encore.");
+        setSearchResults([]);
+        setShowResults(true);
+        setLoading(false);
+      }
+    }, 400)
+  ).current;
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setQuery(value);
-
-    if (value.length < 2) {
-      setSearchResults([]);
-      setShowResults(false);
-      return;
+    setError(null);
+    debouncedSearch(value);
+    // If Mapbox returns no results, fallback to local terrace search
+    if (value.length >= 2 && terraces.length > 0) {
+      const results = terraces
+        .filter((terrace) =>
+          terrace.address.toLowerCase().includes(value.toLowerCase())
+        )
+        .map((terrace) => ({
+          id: terrace.id,
+          address: terrace.address,
+          coords: [terrace.lon, terrace.lat] as [number, number],
+        }));
+      if (results.length > 0) {
+        setSearchResults(results.slice(0, 5));
+        setShowResults(true);
+        setLoading(false);
+      }
     }
-
-    // Simple search implementation - filter terraces by address containing the query
-    const results = terraces
-      .filter((terrace) =>
-        terrace.address.toLowerCase().includes(value.toLowerCase())
-      )
-      .map((terrace) => ({
-        id: terrace.id,
-        address: terrace.address,
-      }));
-
-    setSearchResults(results.slice(0, 5)); // Limit to first 5 results
-    setShowResults(true);
   };
 
-  const handleSelectTerrace = (terraceId: string) => {
+  const handleSelectResult = (result: {
+    id: string;
+    address: string;
+    coords?: [number, number];
+  }) => {
     setShowResults(false);
-    const terrace = terraces.find((t) => t.id === terraceId);
-    if (terrace && flyTo) {
-      // Center map on the selected terrace
-      flyTo([terrace.lon, terrace.lat], 16);
+    setQuery(result.address);
+    if (result.coords && flyTo) {
+      flyTo(result.coords, 16);
     }
   };
 
@@ -58,12 +126,18 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     setQuery("");
     setSearchResults([]);
     setShowResults(false);
+    setError(null);
   };
 
   return (
-    <div className={`relative ${className}`}>
+    <div
+      className={
+        `relative ${className} ` +
+        "bg-background/80 backdrop-blur-md rounded-lg shadow-xl border border-border/20 p-3 z-10 w-full"
+      }
+    >
       <Input
-        placeholder="Search for a terrace..."
+        placeholder="Rechercher une adresse, un quartier..."
         value={query}
         onChange={handleSearch}
         onClear={handleClear}
@@ -88,7 +162,37 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         onFocus={() => setShowResults(searchResults.length > 0)}
         onBlur={() => setTimeout(() => setShowResults(false), 200)}
       />
-
+      {loading && (
+        <div className="absolute right-4 top-3">
+          <svg
+            className="animate-spin h-5 w-5 text-amber-500"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+              fill="none"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v8z"
+            />
+          </svg>
+        </div>
+      )}
+      {error && <div className="text-xs text-red-500 mt-1">{error}</div>}
+      {showResults && !loading && searchResults.length === 0 && !error && (
+        <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg border border-slate-200 max-h-80 overflow-y-auto">
+          <div className="py-2 px-4 text-sm text-slate-500">
+            Aucun résultat trouvé.
+          </div>
+        </div>
+      )}
       {showResults && searchResults.length > 0 && (
         <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg border border-slate-200 max-h-80 overflow-y-auto">
           <ul className="py-1">
@@ -96,7 +200,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
               <li
                 key={result.id}
                 className="px-4 py-2 hover:bg-amber-50 cursor-pointer text-sm text-slate-700"
-                onClick={() => handleSelectTerrace(result.id)}
+                onClick={() => handleSelectResult(result)}
               >
                 {result.address}
               </li>

@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import Container from "@/components/layout/Container";
@@ -8,7 +8,8 @@ import DateControl from "@/components/controls/DateControl";
 import TimeControl from "@/components/controls/TimeControl";
 import { useTime } from "@/contexts/TimeContext";
 import { Button } from "@/components/ui/Button";
-import MapView from "@/components/map/MapView";
+import MapView, { MapViewHandle } from "@/components/map/MapView";
+import SearchBar from "@/components/controls/SearchBar";
 
 export type Terrace = {
   id: string;
@@ -24,6 +25,7 @@ export type Terrace = {
 
 export default function Home() {
   const { formattedDate, currentTime, resetToNow } = useTime();
+  const mapRef = useRef<MapViewHandle>(null);
 
   // Format current time to the format expected by the API (tHHMM)
   const formatTimeForAPI = (time: string): string => {
@@ -35,27 +37,26 @@ export default function Home() {
     return `t${hours}${minutes}`;
   };
 
+  const handleFlyTo = (coords: [number, number], zoom?: number) => {
+    mapRef.current?.flyTo(coords, zoom);
+  };
+
   return (
-    <div className="flex flex-col min-h-screen">
-      <Header />
-      <main className="flex-1 flex flex-col">
-        <Container className="pt-4 pb-2 flex flex-col gap-2">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-            <div className="flex flex-row gap-2 items-center">
-              <TimeControl />
-              <Button variant="secondary" size="sm" onClick={resetToNow}>
-                Now
-              </Button>
-            </div>
-          </div>
-        </Container>
-        <Container className="flex-grow pb-8" fullWidth>
-          <div className="w-full h-[calc(100vh-300px)] min-h-[500px]">
-            <MapView currentTimeKey={formatTimeForAPI(currentTime)} />
-          </div>
-        </Container>
-      </main>
-      <Footer />
+    <div className="relative w-screen h-screen overflow-hidden">
+      {/* Map as absolute background */}
+      <div className="absolute inset-0 z-0">
+        <MapView ref={mapRef} currentTimeKey={formatTimeForAPI(currentTime)} />
+      </div>
+      {/* Floating SearchBar */}
+      <div className="fixed top-6 left-6 z-10 w-[min(90vw,400px)]">
+        <SearchBar terraces={[]} flyTo={handleFlyTo} />
+      </div>
+      {/* Floating TimeControl only */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-10 w-full max-w-xl px-2">
+        <div className="bg-background/80 backdrop-blur-md rounded-lg shadow-xl border border-border/20 p-3 z-10 w-full flex items-center justify-center">
+          <TimeControl />
+        </div>
+      </div>
     </div>
   );
 }

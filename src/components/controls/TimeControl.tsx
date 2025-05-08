@@ -23,7 +23,8 @@ function formatTimeDisplay(timeString: string) {
     const date = new Date();
     date.setHours(h);
     date.setMinutes(m);
-    return format(date, "h:mm a");
+    // Use 24-hour French style: HH:mm
+    return format(date, "HH:mm");
   } catch {
     return timeString;
   }
@@ -48,14 +49,17 @@ export const TimeControl: React.FC = () => {
   ).current;
 
   return (
-    <Card className="p-8 flex flex-col gap-4 items-center w-full max-w-3xl mx-auto">
-      <h3 className="text-base font-semibold text-slate-700 mb-2">
-        Time of Day
-      </h3>
-      <div className="w-full flex flex-col gap-4 items-center">
-        <div className="relative w-full px-2">
+    <div className="w-full max-w-xl flex flex-col items-center">
+      <div className="flex flex-row flex-wrap items-baseline mb-3 w-full justify-center">
+        <span className="text-lg font-medium text-slate-800 drop-shadow-sm">
+          Où boire un coup et se bronzer à{" "}
+          {formatTimeDisplay(sortedTimes[sliderValue])} ?
+        </span>
+      </div>
+      <div className="w-full flex flex-col items-center">
+        <div className="relative w-full max-w-2xl px-2">
           <Slider.Root
-            className="relative flex items-center select-none touch-none w-full h-8"
+            className="relative flex items-center select-none touch-none w-full h-6"
             min={0}
             max={sortedTimes.length - 1}
             step={1}
@@ -67,37 +71,32 @@ export const TimeControl: React.FC = () => {
             aria-label="Time of day"
           >
             {/* Track */}
-            <Slider.Track className="bg-gray-200 relative grow rounded-full h-3">
-              <Slider.Range className="absolute bg-amber-400 rounded-full h-3" />
+            <Slider.Track className="bg-slate-300 dark:bg-slate-700 relative grow rounded-full h-2">
+              <Slider.Range className="absolute bg-amber-400 rounded-full h-2" />
             </Slider.Track>
             {/* Thumb */}
             <Slider.Thumb
-              className="block w-8 h-8 bg-amber-400 border-4 border-white shadow-lg rounded-full focus:outline-none focus:ring-2 focus:ring-amber-500 transition-transform duration-150"
+              className="block w-6 h-6 bg-amber-400 border-4 border-white shadow-lg rounded-full focus:outline-none focus:ring-2 focus:ring-amber-400 transition-transform duration-150"
               aria-label="Selected time"
             />
           </Slider.Root>
           {/* Ticks/Labels */}
-          <div className="flex justify-between text-xs text-slate-500 w-full mt-2 px-1 select-none">
-            <span>{formatTimeDisplay(sortedTimes[0])}</span>
-            <span>
+          <div className="flex justify-between text-xs text-slate-800 drop-shadow-sm w-full mt-2 px-1 select-none">
+            <span className="w-16 text-left">
+              {formatTimeDisplay(sortedTimes[0])}
+            </span>
+            <span className="w-16 text-center">
               {formatTimeDisplay(
                 sortedTimes[Math.floor(sortedTimes.length / 2)]
               )}
             </span>
-            <span>
+            <span className="w-16 text-right">
               {formatTimeDisplay(sortedTimes[sortedTimes.length - 1])}
             </span>
           </div>
         </div>
-        {/* Prominent current time below */}
-        <div
-          className="mt-2 text-2xl font-bold text-amber-700"
-          aria-live="polite"
-        >
-          {formatTimeDisplay(sortedTimes[sliderValue])}
-        </div>
       </div>
-    </Card>
+    </div>
   );
 };
 
