@@ -12,6 +12,7 @@ import maplibregl, { Map, LngLatBounds } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Terrace } from "@/app/page";
 import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/Button";
 
 const MAP_STYLE = "https://tiles.stadiamaps.com/styles/stamen_toner_lite.json";
 const INITIAL_CENTER: [number, number] = [2.377211, 48.8489977]; // Centered on requested coordinate
@@ -650,6 +651,34 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
                         );
                       })()}
                     </div>
+                    {/* Google Maps bar search button */}
+                    <Button
+                      variant="secondary"
+                      size="md"
+                      className="mt-2 w-full flex items-center justify-center gap-2 bg-amber-500 text-white shadow-lg rounded-lg hover:bg-amber-600 hover:scale-[1.03] transition-transform border border-amber-400/70"
+                      onClick={() => {
+                        const lat = selectedTerrace.lat;
+                        const lng = selectedTerrace.lon;
+                        const url = `https://www.google.com/maps/search/bar+restaurant/@${lat},${lng},21z`;
+                        window.open(url, "_blank", "noopener,noreferrer");
+                      }}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={1.5}
+                        stroke="currentColor"
+                        className="w-5 h-5 text-white"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z"
+                        />
+                      </svg>
+                      <span>Voir les bars à proximité</span>
+                    </Button>
                   </div>
                   {/* Pointer triangle */}
                   <div

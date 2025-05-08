@@ -125,7 +125,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
     setShowResults(false);
     setQuery(result.address);
     if (result.coords && flyTo) {
-      flyTo(result.coords, 16);
+      flyTo(result.coords, 18);
     }
   };
 

@@ -38,7 +38,7 @@ export const TimeControl: React.FC = () => {
     : sortedTimes.indexOf(fallbackTime);
   const [sliderValue, setSliderValue] = React.useState(initialIndex);
 
-  // Keep slider in sync with context, fallback to 19:00 if out of range
+  // Keep slider in sync with context, fallback to 17:00 if out of range
   React.useEffect(() => {
     if (sortedTimes.includes(currentTime)) {
       setSliderValue(sortedTimes.indexOf(currentTime));
@@ -59,8 +59,8 @@ export const TimeControl: React.FC = () => {
     <div className="w-full max-w-xl flex flex-col items-center">
       <div className="flex flex-row flex-wrap items-baseline mb-3 w-full justify-center">
         <span className="text-lg font-medium text-slate-800 drop-shadow-sm">
-          Où boire un coup et se bronzer à{" "}
-          {formatTimeDisplay(sortedTimes[sliderValue])} ?
+          Où trouver une terrasse au soleil à{" "}
+          {formatTimeDisplay(sortedTimes[sliderValue])} aujourd&#39;hui ?
         </span>
       </div>
       <div className="w-full flex flex-col items-center">
