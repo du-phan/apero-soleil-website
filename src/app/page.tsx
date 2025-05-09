@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import MapView, { MapViewHandle } from "@/components/map/MapView";
 import SearchBar from "@/components/controls/SearchBar";
 import TimeControl from "@/components/controls/TimeControl";
 import { useTime } from "@/contexts/TimeContext";
+import MethodologyModal from "@/components/ui/MethodologyModal";
 
 export type Terrace = {
   id: string;
@@ -23,6 +24,7 @@ export type Terrace = {
 export default function Home() {
   const mapRef = useRef<MapViewHandle>(null);
   const { currentTime } = useTime();
+  const [showMethodologyModal, setShowMethodologyModal] = useState(false);
 
   // Format current time to the format expected by the API (tHHMM)
   const formatTimeForAPI = (time: string): string => {
@@ -42,7 +44,11 @@ export default function Home() {
     <div className="relative w-screen h-screen overflow-hidden">
       {/* Map as absolute background */}
       <div className="absolute inset-0 z-0">
-        <MapView ref={mapRef} currentTimeKey={formatTimeForAPI(currentTime)} />
+        <MapView
+          ref={mapRef}
+          currentTimeKey={formatTimeForAPI(currentTime)}
+          onShowMethodology={() => setShowMethodologyModal(true)}
+        />
       </div>
       {/* Floating SearchBar */}
       <div className="fixed top-6 left-6 z-10 w-[min(90vw,400px)]">
@@ -54,6 +60,11 @@ export default function Home() {
           <TimeControl />
         </div>
       </div>
+      {/* Methodology Modal (always above) */}
+      <MethodologyModal
+        open={showMethodologyModal}
+        onClose={() => setShowMethodologyModal(false)}
+      />
     </div>
   );
 }

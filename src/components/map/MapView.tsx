@@ -18,6 +18,8 @@ const MAP_STYLE = "https://tiles.stadiamaps.com/styles/stamen_toner_lite.json";
 const INITIAL_CENTER: [number, number] = [2.377211, 48.8489977]; // Centered on requested coordinate
 const INITIAL_ZOOM = 17;
 const SOURCE_ID = "terraces";
+const NOTION_URL =
+  "https://duphan.notion.site/Yet-another-blog-on-climate-change-408ac84658894230a4a0f0924d3dc568";
 
 // Debounce utility (moved to top-level)
 function debounce(func: (bounds: LngLatBounds) => void, waitFor: number) {
@@ -34,6 +36,7 @@ function debounce(func: (bounds: LngLatBounds) => void, waitFor: number) {
 
 interface MapViewProps {
   currentTimeKey: string;
+  onShowMethodology?: () => void;
 }
 
 function terracesToGeoJSON(
@@ -70,7 +73,7 @@ function terracesToGeoJSON(
 }
 
 const MapView = forwardRef<MapViewHandle, MapViewProps>(
-  ({ currentTimeKey }, ref) => {
+  ({ currentTimeKey, onShowMethodology }, ref) => {
     const mapContainer = useRef<HTMLDivElement>(null);
     const mapRef = useRef<Map | null>(null);
     const [terracesData, setTerracesData] = useState<Terrace[]>([]); // Stores raw terrace data with all time slots
@@ -502,11 +505,79 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
       return `${hour}:${min}`;
     }
 
+    function DropdownMenu() {
+      const [open, setOpen] = useState(false);
+      return (
+        <div className="absolute top-4 right-4 z-40">
+          <button
+            className="bg-background/95 backdrop-blur-md rounded-full shadow-xl border border-white/40 ring-1 ring-white/10 p-2 flex items-center justify-center hover:bg-slate-100 transition focus:outline-none focus:ring-2 focus:ring-slate-300"
+            onClick={() => setOpen((v) => !v)}
+            aria-label="Options"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-6 h-6 text-slate-500"
+            >
+              <circle cx="12" cy="12" r="1.5" />
+              <circle cx="12" cy="6" r="1.5" />
+              <circle cx="12" cy="18" r="1.5" />
+            </svg>
+          </button>
+          <AnimatePresence>
+            {open && (
+              <motion.div
+                initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                transition={{ duration: 0.18 }}
+                className="absolute right-0 mt-2 min-w-[280px] bg-background/95 backdrop-blur-md rounded-xl shadow-xl border border-white/40 ring-1 ring-white/10 p-2 flex flex-col gap-1 z-50"
+                onMouseLeave={() => setOpen(false)}
+              >
+                <button
+                  className="w-full text-left px-4 py-2 rounded-lg text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition text-base font-medium"
+                  onClick={() => {
+                    setOpen(false);
+                    if (onShowMethodology) onShowMethodology();
+                  }}
+                >
+                  C'est quoi cette magie noire ?
+                </button>
+                <a
+                  href={NOTION_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full block px-4 py-2 rounded-lg text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition text-base font-medium"
+                  onClick={() => setOpen(false)}
+                >
+                  À propos de moi
+                </a>
+                <a
+                  href="https://buymeacoffee.com/duphan"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full block px-4 py-2 rounded-lg text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition text-base font-medium"
+                  onClick={() => setOpen(false)}
+                >
+                  Buy me a 🍻
+                </a>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      );
+    }
+
     return (
       <div
         ref={mapContainer}
         className="w-full h-full rounded-lg shadow overflow-hidden relative"
       >
+        {/* Dropdown option button */}
+        <DropdownMenu />
         {/* Floating marker info popup */}
         <AnimatePresence>
           {selectedTerrace &&
