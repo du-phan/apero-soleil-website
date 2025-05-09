@@ -1,5 +1,4 @@
-import fs from "fs";
-import path from "path";
+import { createClient } from "@supabase/supabase-js";
 
 // New interface for the properties of a terrace feature
 export interface TerraceFeatureProperties {
@@ -37,139 +36,36 @@ export type TerraceRecord = {
   [key: string]: unknown;
 };
 
-const GEOJSON_PATH = path.join(
-  process.cwd(),
-  "src/data/sunlight_results.geojson"
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Helper to verify the GeoJSON file exists
-function verifyGeoJsonFile(): boolean {
-  try {
-    const exists = fs.existsSync(GEOJSON_PATH);
-    console.log(
-      `[csvParser] GeoJSON file exists: ${exists} at path: ${GEOJSON_PATH}`
-    );
-    if (exists) {
-      const stats = fs.statSync(GEOJSON_PATH);
-      console.log(
-        `[csvParser] GeoJSON file size: ${(stats.size / 1024 / 1024).toFixed(
-          2
-        )} MB`
-      );
-    }
-    return exists;
-  } catch (error) {
-    console.error(`[csvParser] Error verifying GeoJSON file: ${error}`);
-    return false;
-  }
-}
+const BUCKET = "apero-soleil";
+const FILE_PATH = "sunlight_results.geojson";
 
 /**
- * Parses the optimized GeoJSON file of terrace sunshine records.
- * This version reads the entire file synchronously as it's expected to be smaller.
+ * Fetches and parses the GeoJSON file from Supabase private bucket.
+ * Note: Caching is now handled at the API route level.
  */
-export function parseGeoJson(): TerraceFeature[] {
-  try {
-    console.log(`[csvParser] Starting to parse GeoJSON file...`);
-
-    if (!verifyGeoJsonFile()) {
-      console.error(`[csvParser] GeoJSON file not found at: ${GEOJSON_PATH}`);
-      return [];
-    }
-
-    console.log(`[csvParser] Reading file content...`);
-    const fileContent = fs.readFileSync(GEOJSON_PATH, "utf8");
-    console.log(
-      `[csvParser] File read successfully. Content length: ${fileContent.length} characters`
-    );
-
-    console.log(`[csvParser] Parsing JSON...`);
-    const geojson = JSON.parse(fileContent);
-    console.log(`[csvParser] JSON parsed successfully.`);
-
-    if (!geojson || !geojson.features || !Array.isArray(geojson.features)) {
-      console.error(
-        `[csvParser] Invalid GeoJSON structure: missing or invalid features array`
-      );
-      console.log(
-        `[csvParser] GeoJSON structure:`,
-        JSON.stringify({
-          type: geojson?.type,
-          featuresExists: !!geojson?.features,
-          featuresIsArray: Array.isArray(geojson?.features),
-          featuresLength: geojson?.features?.length || 0,
-        })
-      );
-      return [];
-    }
-
-    const features = geojson.features as TerraceFeature[];
-    console.log(`[csvParser] Found ${features.length} features in GeoJSON`);
-
-    // Check the structure of the first feature for validation
-    if (features.length > 0) {
-      const firstFeature = features[0];
-      const hasValidGeometry =
-        firstFeature.geometry &&
-        firstFeature.geometry.type === "Point" &&
-        Array.isArray(firstFeature.geometry.coordinates) &&
-        firstFeature.geometry.coordinates.length === 2;
-
-      const hasValidProperties =
-        firstFeature.properties &&
-        typeof firstFeature.properties.id === "string";
-
-      console.log(`[csvParser] First feature validation:`, {
-        hasValidGeometry,
-        hasValidProperties,
-        geometryType: firstFeature.geometry?.type,
-        coordinatesLength: firstFeature.geometry?.coordinates?.length,
-        idExists: !!firstFeature.properties?.id,
-      });
-
-      // Check for time properties
-      const timeProps = Object.keys(firstFeature.properties).filter(
-        (key) => key.startsWith("t") && !isNaN(parseInt(key.substring(1)))
-      );
-
-      console.log(
-        `[csvParser] Found ${timeProps.length} time properties in first feature`
-      );
-      console.log(`[csvParser] Sample time properties:`, timeProps.slice(0, 5));
-
-      // Check for duplicate IDs
-      const idCounts: Record<string, number> = {};
-      features.forEach((f) => {
-        const id = f.properties.id;
-        idCounts[id] = (idCounts[id] || 0) + 1;
-      });
-
-      const duplicateIds = Object.entries(idCounts)
-        .filter(([, count]) => count > 1)
-        .map(([id]) => id);
-
-      if (duplicateIds.length > 0) {
-        console.warn(
-          `[csvParser] Found ${duplicateIds.length} duplicate terrace IDs`
-        );
-        console.warn(
-          `[csvParser] First 5 duplicate IDs:`,
-          duplicateIds.slice(0, 5)
-        );
-      } else {
-        console.log(`[csvParser] No duplicate terrace IDs found - good!`);
-      }
-    }
-
-    return features;
-  } catch (error) {
-    console.error(`[csvParser] Error parsing GeoJSON: ${error}`);
-    return [];
+export async function parseGeoJson(): Promise<TerraceFeature[]> {
+  // Always fetch fresh data from Supabase
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .download(FILE_PATH);
+  if (error || !data) {
+    throw new Error("Failed to fetch GeoJSON from Supabase private bucket");
   }
+  const text = await data.text();
+  const geojson = JSON.parse(text);
+  if (!geojson || !geojson.features || !Array.isArray(geojson.features)) {
+    throw new Error("Invalid GeoJSON structure from Supabase");
+  }
+  return geojson.features as TerraceFeature[];
 }
 
-export function getUniqueTerraces(): string[] {
-  const allFeatures = parseGeoJson();
+export async function getUniqueTerraces(): Promise<string[]> {
+  const allFeatures = await parseGeoJson();
   const uniqueIds = new Set<string>();
   allFeatures.forEach((feature) => {
     uniqueIds.add(feature.properties.id);
@@ -177,18 +73,15 @@ export function getUniqueTerraces(): string[] {
   return Array.from(uniqueIds);
 }
 
-export function getAvailableTimeSlots(): string[] {
-  const allFeatures = parseGeoJson();
+export async function getAvailableTimeSlots(): Promise<string[]> {
+  const allFeatures = await parseGeoJson();
   if (!allFeatures || allFeatures.length === 0) {
     return [];
   }
   // Infer time slots from the properties of the first feature
-  // Exclude 'id', 'terrace_lat', 'terrace_lon' or other non-timeslot properties
   const properties = allFeatures[0].properties;
   const timeSlots = Object.keys(properties).filter(
     (key) => key.startsWith("t") && !isNaN(parseInt(key.substring(1), 10))
-    // Add more specific filtering if 'terrace_lat', 'terrace_lon' are still present
-    // and not desired, e.g. key !== 'id' && key !== 'terrace_lat' && key !== 'terrace_lon'
   );
   return timeSlots.sort(); // Sort for consistency
 }
@@ -208,7 +101,7 @@ function featureToTerraceRecord(feature: TerraceFeature): TerraceRecord {
 export async function getTerraceRecords(
   terraceId: string
 ): Promise<TerraceRecord[]> {
-  const features = parseGeoJson();
+  const features = await parseGeoJson();
   return features
     .filter((f) => f.properties.id === terraceId)
     .map(featureToTerraceRecord);
@@ -218,7 +111,7 @@ export async function getTerraceRecords(
 export async function parseCsv(options?: {
   filter?: (record: TerraceRecord) => boolean;
 }): Promise<TerraceRecord[]> {
-  const features = parseGeoJson();
+  const features = await parseGeoJson();
   let records = features.map(featureToTerraceRecord);
   if (options?.filter) {
     records = records.filter(options.filter);

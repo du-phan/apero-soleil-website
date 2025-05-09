@@ -544,17 +544,8 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
                     if (onShowMethodology) onShowMethodology();
                   }}
                 >
-                  C'est quoi cette magie noire ?
+                  C&apos;est quoi cette magie noire ?
                 </button>
-                <a
-                  href={NOTION_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full block px-4 py-2 rounded-lg text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition text-base font-medium"
-                  onClick={() => setOpen(false)}
-                >
-                  À propos de moi
-                </a>
                 <a
                   href="https://buymeacoffee.com/duphan"
                   target="_blank"
@@ -563,6 +554,15 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
                   onClick={() => setOpen(false)}
                 >
                   Buy me a 🍻
+                </a>
+                <a
+                  href={NOTION_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full block px-4 py-2 rounded-lg text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition text-base font-medium"
+                  onClick={() => setOpen(false)}
+                >
+                  À propos
                 </a>
               </motion.div>
             )}
@@ -656,7 +656,7 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
                               d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z"
                             />
                           </svg>
-                          <span>{`À l'ombre à ${formatTimeKeyToHuman(
+                          <span>{`À l&apos;ombre à ${formatTimeKeyToHuman(
                             currentTimeKey
                           )}`}</span>
                         </>
@@ -666,7 +666,7 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
                     {/* Sunshine timeline (minimal, modern) */}
                     <div className="flex flex-col space-y-2">
                       <div className="text-sm font-normal text-slate-500">
-                        Périodes d'ensoleillement aujourd'hui :
+                        Périodes d&apos;ensoleillement aujourd&apos;hui :
                       </div>
                       {(() => {
                         if (!selectedTerrace) return null;

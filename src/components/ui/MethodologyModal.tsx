@@ -71,7 +71,7 @@ const MethodologyModal: React.FC<MethodologyModalProps> = ({
                   <br />
                   <span className="text-slate-600">
                     Fichier GeoJSON listant les emplacements des terrasses
-                    disposant d'une autorisation officielle.
+                    disposant d&apos;une autorisation officielle.
                     <br />
                     <a
                       href="https://opendata.paris.fr/explore/dataset/terrasses-autorisations/information/?disjunctive.arrondissement&disjunctive.typologie"
@@ -110,7 +110,7 @@ const MethodologyModal: React.FC<MethodologyModalProps> = ({
                   <br />
                   <span className="text-slate-600">
                     Permet de calculer, pour chaque créneau horaire simulé,
-                    l'azimut et la hauteur du soleil.
+                    l&apos;azimut et la hauteur du soleil.
                   </span>
                 </li>
               </ul>
@@ -130,7 +130,7 @@ const MethodologyModal: React.FC<MethodologyModalProps> = ({
                 </li>
                 <li>
                   <span className="font-medium">
-                    Simulation d'ombre par raytracing
+                    Simulation d&apos;ombre par raytracing
                   </span>
                   <br />
                   <span className="text-slate-600">Pour chaque terrasse :</span>
@@ -139,22 +139,22 @@ const MethodologyModal: React.FC<MethodologyModalProps> = ({
                       Son altitude est estimée à partir du MNS, en prenant la
                       valeur minimale dans une petite zone tampon autour du
                       point. Cela compense les imprécisions des coordonnées
-                      d'entrée (certaines terrasses peuvent être positionnées
-                      sur un bâtiment au lieu du trottoir, ce qui fausserait
-                      l'analyse).
+                      d&apos;entrée (certaines terrasses peuvent être
+                      positionnées sur un bâtiment au lieu du trottoir, ce qui
+                      fausserait l&apos;analyse).
                     </li>
                     <li>
                       À chaque horaire simulé, un rayon solaire est projeté
-                      selon l'angle d'incidence du soleil.
+                      selon l&apos;angle d&apos;incidence du soleil.
                     </li>
                     <li>
                       À intervalles réguliers (tous les 1 m), on compare la
-                      hauteur théorique du rayon à l'altitude relevée dans le
-                      MNS.
+                      hauteur théorique du rayon à l&apos;altitude relevée dans
+                      le MNS.
                     </li>
                     <li>
                       Si une obstruction est détectée (bâtiment, arbre, etc.),
-                      la terrasse est considérée à l'ombre.
+                      la terrasse est considérée à l&apos;ombre.
                     </li>
                   </ul>
                 </li>

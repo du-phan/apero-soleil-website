@@ -2,9 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { parseGeoJson, TerraceFeature } from "@/lib/data/csvParser";
 // import { terraceRecordsToGeoJson, groupTerraceRecordsByTimeline } from "@/lib/data/dataTransformers";
 
-// Load all terrace features into memory once
-const allTerraceFeatures: TerraceFeature[] = parseGeoJson();
-
 // Define the structure for a terrace in our API response
 // This should now align with the main Terrace type which includes all time properties
 interface TerraceAPIResponse {
@@ -20,69 +17,14 @@ interface TerraceAPIResponse {
   [key: `t${string}`]: boolean | number | string | undefined;
 }
 
-// Helper function to filter terraces based on bounding box
-function getFilteredTerraces(
-  // timeKey: string, // No longer needed here, client will handle current time
-  bounds?: {
-    swLng: number;
-    swLat: number;
-    neLng: number;
-    neLat: number;
-  }
-): TerraceAPIResponse[] {
-  let featuresToProcess = allTerraceFeatures;
-
-  // 1. Filter by bounding box if bounds are provided
-  if (bounds) {
-    featuresToProcess = allTerraceFeatures.filter((feature) => {
-      const [lon, lat] = feature.geometry.coordinates;
-      return (
-        lon >= bounds.swLng &&
-        lon <= bounds.neLng &&
-        lat >= bounds.swLat &&
-        lat <= bounds.neLat
-      );
-    });
-  }
-
-  // 2. Map to API response format, passing through all properties
-  const terraces = featuresToProcess.map((feature) => {
-    const [lon, lat] = feature.geometry.coordinates;
-    const address = feature.properties.id.includes("demo")
-      ? `Demo Terrace #${feature.properties.id.split("-")[1]}`
-      : feature.properties.id;
-
-    // Construct the response object, spreading all properties from the GeoJSON feature
-    // This assumes feature.properties already contains t0900, t0930, etc.
-    const responseTerrace: TerraceAPIResponse = {
-      ...feature.properties, // Spread all properties from the source first
-      id: feature.properties.id,
-      lat: lat,
-      lon: lon,
-      address: address,
-    };
-
-    // Ensure core properties are not overwritten by spread if they have different names in source
-    // For example, if source has 'terrace_id' instead of 'id', map explicitly.
-    // Here, we assume 'id' is consistent.
-    // We also delete the original 'id' from the spread properties if it was duplicated,
-    // or ensure the intended 'id' (and lat/lon/address) takes precedence.
-    // The current `TerraceFeature` properties seem to be just 'id' and time keys.
-    // If `feature.properties` has a conflicting `lat`, `lon`, or `address`, this needs careful handling.
-    // Assuming `feature.properties` primarily contains `id` and `tXXXX` keys.
-
-    return responseTerrace;
-  });
-
-  return terraces;
-}
+// --- In-memory cache for terrace GeoJSON (moved from csvParser) ---
+let cachedGeoJson: TerraceFeature[] | null = null;
+let cacheTimestamp: number = 0;
+const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 hours
 
 // The actual API route handler
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-
-  // Get time parameter - NO LONGER USED FOR FILTERING HERE
-  // const timeKey = searchParams.get("time");
 
   // Get bounding box parameters
   const swLngParam = searchParams.get("swLng");
@@ -91,19 +33,8 @@ export async function GET(request: NextRequest) {
   const neLatParam = searchParams.get("neLat");
 
   console.log(
-    `[API] Request parameters - bounds: ${swLngParam},${swLatParam} to ${neLngParam},${neLatParam}` // Removed timeKey from log
+    `[API] Request parameters - bounds: ${swLngParam},${swLatParam} to ${neLngParam},${neLatParam}`
   );
-
-  // Validate required timeKey - NO LONGER REQUIRED
-  // if (!timeKey || !timeKey.startsWith("t")) {
-  //   console.error(`[API] Invalid time parameter: ${timeKey}`);
-  //   return NextResponse.json(
-  //     {
-  //       error: 'Invalid or missing "time" parameter. Expected format: "tHHMM"',
-  //     },
-  //     { status: 400 }
-  //   );
-  // }
 
   let bounds;
   if (swLngParam && swLatParam && neLngParam && neLatParam) {
@@ -127,11 +58,70 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const terraces = getFilteredTerraces(bounds); // Removed timeKey argument
+  try {
+    // --- Caching logic ---
+    let allTerraceFeatures: TerraceFeature[];
+    const now = Date.now();
+    if (cachedGeoJson && now - cacheTimestamp < CACHE_TTL) {
+      allTerraceFeatures = cachedGeoJson;
+    } else {
+      try {
+        allTerraceFeatures = await parseGeoJson();
+        cachedGeoJson = allTerraceFeatures;
+        cacheTimestamp = now;
+      } catch (fetchError) {
+        if (cachedGeoJson) {
+          console.warn(
+            "[API] Supabase fetch failed, serving stale cache.",
+            fetchError
+          );
+          allTerraceFeatures = cachedGeoJson;
+        } else {
+          throw fetchError;
+        }
+      }
+    }
 
-  // Note: The 'limit' parameter from the original code is not used here as
-  // viewport filtering is the primary mechanism. If needed, it could be added back
-  // to slice the 'terraces' array before responding.
+    let featuresToProcess: TerraceFeature[] = allTerraceFeatures;
 
-  return NextResponse.json(terraces);
+    // 1. Filter by bounding box if bounds are provided
+    if (bounds) {
+      featuresToProcess = allTerraceFeatures.filter(
+        (feature: TerraceFeature) => {
+          const [lon, lat] = feature.geometry.coordinates;
+          return (
+            lon >= bounds.swLng &&
+            lon <= bounds.neLng &&
+            lat >= bounds.swLat &&
+            lat <= bounds.neLat
+          );
+        }
+      );
+    }
+
+    // 2. Map to API response format, passing through all properties
+    const terraces: TerraceAPIResponse[] = featuresToProcess.map(
+      (feature: TerraceFeature) => {
+        const [lon, lat] = feature.geometry.coordinates;
+        const address = feature.properties.id.includes("demo")
+          ? `Demo Terrace #${feature.properties.id.split("-")[1]}`
+          : feature.properties.id;
+        return {
+          ...feature.properties,
+          id: feature.properties.id,
+          lat: lat,
+          lon: lon,
+          address: address,
+        };
+      }
+    );
+
+    return NextResponse.json(terraces);
+  } catch (error) {
+    console.error("[API] Error loading terrace data:", error);
+    return NextResponse.json(
+      { error: "Failed to load terrace data" },
+      { status: 500 }
+    );
+  }
 }

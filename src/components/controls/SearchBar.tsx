@@ -206,7 +206,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
             {searchResults.map((result) => (
               <li
                 key={result.id}
-                className="px-4 py-2 hover:bg-amber-50 cursor-pointer text-sm text-slate-700"
+                className="mx-1 px-4 py-2 cursor-pointer text-sm text-slate-700 rounded-lg transition hover:bg-slate-100 hover:text-slate-900"
                 onClick={() => handleSelectResult(result)}
               >
                 {result.address}
