@@ -56,50 +56,56 @@ export const TimeControl: React.FC = () => {
   ).current;
 
   return (
-    <div className="w-full max-w-xl flex flex-col items-center">
-      <div className="flex flex-row flex-wrap items-baseline mb-3 w-full justify-center">
-        <span className="text-lg font-medium text-slate-600 drop-shadow-sm">
-          Besoin d’une terrasse au soleil à{" "}
-          {formatTimeDisplay(sortedTimes[sliderValue])} ? Suis la lumière.
-        </span>
-      </div>
-      <div className="w-full flex flex-col items-center">
-        <div className="relative w-full max-w-2xl px-2">
-          <Slider.Root
-            className="relative flex items-center select-none touch-none w-full h-6"
-            min={0}
-            max={sortedTimes.length - 1}
-            step={1}
-            value={[sliderValue]}
-            onValueChange={([val]) => {
-              setSliderValue(val);
-              debouncedSetTime(val);
-            }}
-            aria-label="Time of day"
-          >
-            {/* Track */}
-            <Slider.Track className="bg-[#607D8B] relative grow rounded-full h-2">
-              <Slider.Range className="absolute bg-[#FFD600] rounded-full h-2" />
-            </Slider.Track>
-            {/* Thumb */}
-            <Slider.Thumb
-              className="block w-6 h-6 bg-[#FFD600] border-4 border-white shadow-lg rounded-full focus:outline-none focus:ring-2 focus:ring-[#FFD600] transition-transform duration-150"
-              aria-label="Selected time"
-            />
-          </Slider.Root>
-          {/* Ticks/Labels */}
-          <div className="flex justify-between text-xs text-slate-600 drop-shadow-sm w-full mt-2 px-1 select-none">
-            <span className="w-16 text-left">
-              {formatTimeDisplay(sortedTimes[0])}
+    <div className="w-full flex flex-col items-center">
+      <div className="w-full max-w-lg px-6 py-5 bg-background rounded-lg shadow-md">
+        <div className="w-full mx-auto">
+          <div className="flex flex-row flex-wrap items-baseline mb-2 w-full justify-center">
+            <span className="text-lg font-medium text-slate-600 drop-shadow-sm text-center break-words w-full">
+              Envie de bronzer en terrasse à{" "}
+              {formatTimeDisplay(sortedTimes[sliderValue])} aujourd&apos;hui ?
+              <br className="hidden sm:inline" />
+              Suis la lumière ☀️
             </span>
-            <span className="w-16 text-center">
-              {formatTimeDisplay(
-                sortedTimes[Math.floor(sortedTimes.length / 2)]
-              )}
-            </span>
-            <span className="w-16 text-right">
-              {formatTimeDisplay(sortedTimes[sortedTimes.length - 1])}
-            </span>
+          </div>
+        </div>
+        <div className="w-full flex flex-col items-center">
+          <div className="relative w-full">
+            <Slider.Root
+              className="relative flex items-center select-none touch-none w-full h-6"
+              min={0}
+              max={sortedTimes.length - 1}
+              step={1}
+              value={[sliderValue]}
+              onValueChange={([val]) => {
+                setSliderValue(val);
+                debouncedSetTime(val);
+              }}
+              aria-label="Time of day"
+            >
+              {/* Track */}
+              <Slider.Track className="bg-[#607D8B] relative grow rounded-full h-2">
+                <Slider.Range className="absolute bg-[#FFD600] rounded-full h-2" />
+              </Slider.Track>
+              {/* Thumb */}
+              <Slider.Thumb
+                className="block w-6 h-6 bg-[#FFD600] border-4 border-white shadow-lg rounded-full focus:outline-none focus:ring-2 focus:ring-[#FFD600] transition-transform duration-150"
+                aria-label="Selected time"
+              />
+            </Slider.Root>
+            {/* Ticks/Labels */}
+            <div className="flex justify-between text-xs text-slate-600 drop-shadow-sm w-full mt-2 select-none">
+              <span className="w-12 text-left">
+                {formatTimeDisplay(sortedTimes[0])}
+              </span>
+              <span className="w-12 text-center">
+                {formatTimeDisplay(
+                  sortedTimes[Math.floor(sortedTimes.length / 2)]
+                )}
+              </span>
+              <span className="w-12 text-right">
+                {formatTimeDisplay(sortedTimes[sortedTimes.length - 1])}
+              </span>
+            </div>
           </div>
         </div>
       </div>

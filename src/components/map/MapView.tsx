@@ -656,7 +656,7 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
                               d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z"
                             />
                           </svg>
-                          <span>{`À l&apos;ombre à ${formatTimeKeyToHuman(
+                          <span>{`À l'ombre à ${formatTimeKeyToHuman(
                             currentTimeKey
                           )}`}</span>
                         </>

@@ -55,7 +55,7 @@ export default function Home() {
         <SearchBar terraces={[]} flyTo={handleFlyTo} />
       </div>
       {/* Floating TimeControl only */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-10 w-full max-w-xl px-2">
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-10 w-full max-w-lg px-0">
         <div className="bg-background/95 backdrop-blur-md rounded-xl shadow-xl border border-white/40 ring-1 ring-white/10 p-3 z-10 w-full flex items-center justify-center">
           <TimeControl />
         </div>
