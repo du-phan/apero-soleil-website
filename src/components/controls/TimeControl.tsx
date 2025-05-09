@@ -32,13 +32,13 @@ function formatTimeDisplay(timeString: string) {
 export const TimeControl: React.FC = () => {
   const { currentTime, setTime } = useTime();
   // Fallback to 17:00 if currentTime is not in sortedTimes
-  const fallbackTime = "17:00";
+  const fallbackTime = "15:00";
   const initialIndex = sortedTimes.includes(currentTime)
     ? sortedTimes.indexOf(currentTime)
     : sortedTimes.indexOf(fallbackTime);
   const [sliderValue, setSliderValue] = React.useState(initialIndex);
 
-  // Keep slider in sync with context, fallback to 17:00 if out of range
+  // Keep slider in sync with context, fallback to 15:00 if out of range
   React.useEffect(() => {
     if (sortedTimes.includes(currentTime)) {
       setSliderValue(sortedTimes.indexOf(currentTime));
