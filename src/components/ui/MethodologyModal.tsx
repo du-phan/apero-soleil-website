@@ -56,7 +56,7 @@ const MethodologyModal: React.FC<MethodologyModalProps> = ({
             <div className="flex items-center gap-3 mb-2">
               <span className="text-3xl">☀️</span>
               <h2 className="text-2xl font-bold text-slate-900">
-                Méthodologie
+                La science derrière ton apéro au soleil
               </h2>
             </div>
             <div className="space-y-3">
@@ -113,6 +113,17 @@ const MethodologyModal: React.FC<MethodologyModalProps> = ({
                     l&apos;azimut et la hauteur du soleil.
                   </span>
                 </li>
+                <li>
+                  <span className="font-medium">
+                    Cloud cover rate – Open-Meteo
+                  </span>
+                  <br />
+                  <span className="text-slate-600">
+                    Données horaires sur la couverture nuageuse. Si le ciel est
+                    trop couvert, la terrasse est considérée comme à
+                    l&apos;ombre, même sans obstacle.
+                  </span>
+                </li>
               </ul>
             </div>
             <div className="space-y-3">
@@ -122,10 +133,10 @@ const MethodologyModal: React.FC<MethodologyModalProps> = ({
                   <span className="font-medium">Position du soleil</span>
                   <br />
                   <span className="text-slate-600">
-                    Pour chaque créneau de la période analysée, la position du
-                    soleil (azimut et hauteur) est calculée depuis un point de
-                    référence fixe situé au centre de Paris. Ces coordonnées
-                    servent à simuler la direction des rayons solaires.
+                    Pour chaque créneau horaire, on calcule la position du
+                    soleil (azimut + hauteur) depuis un point de référence fixe
+                    au centre de Paris. Ces coordonnées permettent de simuler la
+                    direction des rayons.
                   </span>
                 </li>
                 <li>
@@ -136,27 +147,30 @@ const MethodologyModal: React.FC<MethodologyModalProps> = ({
                   <span className="text-slate-600">Pour chaque terrasse :</span>
                   <ul className="list-disc pl-6 text-slate-600 text-base mt-1 space-y-1">
                     <li>
-                      Son altitude est estimée à partir du MNS, en prenant la
-                      valeur minimale dans une petite zone tampon autour du
-                      point. Cela compense les imprécisions des coordonnées
-                      d&apos;entrée (certaines terrasses peuvent être
-                      positionnées sur un bâtiment au lieu du trottoir, ce qui
-                      fausserait l&apos;analyse).
+                      On estime son altitude via le MNS, en prenant la valeur
+                      minimale dans une petite zone autour du point (pour
+                      corriger les imprécisions de placement).
                     </li>
                     <li>
-                      À chaque horaire simulé, un rayon solaire est projeté
-                      selon l&apos;angle d&apos;incidence du soleil.
+                      À chaque horaire, un rayon solaire est projeté selon
+                      l&apos;angle d&apos;incidence.
                     </li>
                     <li>
-                      À intervalles réguliers (tous les 1 m), on compare la
-                      hauteur théorique du rayon à l&apos;altitude relevée dans
-                      le MNS.
-                    </li>
-                    <li>
-                      Si une obstruction est détectée (bâtiment, arbre, etc.),
-                      la terrasse est considérée à l&apos;ombre.
+                      Tous les mètres, on compare la hauteur du rayon avec celle
+                      du sol. Si un obstacle est détecté (bâtiment, arbre,
+                      etc.), la terrasse est à l&apos;ombre.
                     </li>
                   </ul>
+                </li>
+                <li>
+                  <span className="font-medium">Filtrage météo (nuages)</span>
+                  <br />
+                  <span className="text-slate-600">
+                    Même si le rayon passe, on regarde aussi la couverture
+                    nuageuse au moment donné. Si c&apos;est trop couvert
+                    (au-delà d&apos;un certain seuil), la terrasse est marquée
+                    comme &quot;sans soleil&quot;.
+                  </span>
                 </li>
               </ol>
             </div>

@@ -59,8 +59,8 @@ export const TimeControl: React.FC = () => {
     <div className="w-full max-w-xl flex flex-col items-center">
       <div className="flex flex-row flex-wrap items-baseline mb-3 w-full justify-center">
         <span className="text-lg font-medium text-slate-800 drop-shadow-sm">
-          Où trouver une terrasse au soleil à{" "}
-          {formatTimeDisplay(sortedTimes[sliderValue])} aujourd&#39;hui ?
+          Besoin d’une terrasse au soleil à{" "}
+          {formatTimeDisplay(sortedTimes[sliderValue])} ? Suis la lumière.
         </span>
       </div>
       <div className="w-full flex flex-col items-center">
