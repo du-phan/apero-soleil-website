@@ -20,7 +20,7 @@ interface TerraceAPIResponse {
 // --- In-memory cache for terrace GeoJSON (moved from csvParser) ---
 let cachedGeoJson: TerraceFeature[] | null = null;
 let cacheTimestamp: number = 0;
-const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 hours
+const CACHE_TTL = 1000 * 60 * 60; // 1 hour
 
 // The actual API route handler
 export async function GET(request: NextRequest) {

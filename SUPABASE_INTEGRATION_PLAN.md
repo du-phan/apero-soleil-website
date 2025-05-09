@@ -18,10 +18,10 @@ Integrate Supabase as the primary data source for terrace GeoJSON data, replacin
 ## 2. **Target State**
 
 - **Data Source:** **Supabase private Storage bucket** hosts the latest GeoJSON file, updated daily.
-- **Backend:** API route fetches from the private bucket using the Supabase JS client and a service role key, with in-memory caching and expiry (e.g., 24h TTL).
+- **Backend:** API route fetches from the private bucket using the Supabase JS client and a service role key, with in-memory caching and expiry (**1 hour TTL**).
 - **Frontend:** No change needed; continues to fetch from `/api/terraces`.
 - **Benefits:**
-  - Always up-to-date within a day.
+  - Always up-to-date within an hour.
   - No need to redeploy for new data.
   - Fast responses via cache.
   - Data is protected from unauthorized access.
@@ -48,19 +48,19 @@ Integrate Supabase as the primary data source for terrace GeoJSON data, replacin
 - [x] Refactor `src/lib/data/csvParser.ts` (or the API route):
   - Replace `fs.readFileSync` logic with a function to fetch the file from the private bucket using the Supabase JS client and service role key.
   - Parse the downloaded file as JSON.
-- [ ] Move cache logic to the API route (`/api/terraces`):
+- [x] Move cache logic to the API route (`/api/terraces`):
   - Use module-level variables for cache and timestamp.
-  - Set a cache TTL (e.g., 24 hours).
+  - Set a cache TTL (**1 hour**).
   - On each request, check if cache is valid:
     - If valid, serve from cache.
     - If expired or empty, fetch from Supabase, update cache, and serve.
-- [ ] Add error handling:
+- [x] Add error handling:
   - If fetch fails and cache exists, serve stale cache with a warning.
   - If no cache and fetch fails, return a 500 error.
 
 ### 3.3. **Environment Variables & Security**
 
-- [ ] Add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to Vercel/Next.js environment variables.
+- [x] Add `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to Vercel/Next.js environment variables.
 - [ ] **Never expose the service role key to the client or frontend code.**
 - [ ] Use these variables only in server-side code (API routes, server components).
 
@@ -68,7 +68,7 @@ Integrate Supabase as the primary data source for terrace GeoJSON data, replacin
 
 - [ ] Test locally with the Supabase credentials and a sample file.
 - [ ] Deploy to Vercel and verify:
-  - Data is fetched from Supabase on first request or after cache expiry.
+  - Data is fetched from Supabase on first request or after cache expiry (**1 hour**).
   - Data is served from cache on subsequent requests.
   - Data updates after daily file change in Supabase.
 - [ ] Test error scenarios (Supabase unavailable, invalid file, etc.).
@@ -80,7 +80,7 @@ Integrate Supabase as the primary data source for terrace GeoJSON data, replacin
 
 ---
 
-## 4. **Code Example: Caching Pattern with Private Bucket**
+## 4. **Code Example: Caching Pattern with Private Bucket (1 hour TTL)**
 
 ```ts
 import { createClient } from "@supabase/supabase-js";
@@ -95,7 +95,7 @@ const FILE_PATH = "sunlight_results.geojson";
 
 let cachedGeoJson: any = null;
 let cacheTimestamp: number = 0;
-const CACHE_TTL = 1000 * 60 * 60 * 24; // 24 hours
+const CACHE_TTL = 1000 * 60 * 60; // 1 hour
 
 async function fetchFromSupabase() {
   const { data, error } = await supabase.storage
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
 
 - [x] Supabase private Storage set up and file uploaded
 - [ ] Backend fetches from private bucket using Supabase JS client
-- [ ] Caching logic implemented
+- [ ] Caching logic implemented (**1 hour TTL**)
 - [ ] Environment variables for Supabase URL and service role key configured
 - [ ] Tested locally and on Vercel
 - [ ] Documentation updated
