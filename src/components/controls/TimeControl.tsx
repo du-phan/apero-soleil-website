@@ -58,7 +58,7 @@ export const TimeControl: React.FC = () => {
   return (
     <div className="w-full max-w-xl flex flex-col items-center">
       <div className="flex flex-row flex-wrap items-baseline mb-3 w-full justify-center">
-        <span className="text-lg font-medium text-slate-800 drop-shadow-sm">
+        <span className="text-lg font-medium text-slate-600 drop-shadow-sm">
           Besoin d’une terrasse au soleil à{" "}
           {formatTimeDisplay(sortedTimes[sliderValue])} ? Suis la lumière.
         </span>
@@ -88,7 +88,7 @@ export const TimeControl: React.FC = () => {
             />
           </Slider.Root>
           {/* Ticks/Labels */}
-          <div className="flex justify-between text-xs text-slate-800 drop-shadow-sm w-full mt-2 px-1 select-none">
+          <div className="flex justify-between text-xs text-slate-600 drop-shadow-sm w-full mt-2 px-1 select-none">
             <span className="w-16 text-left">
               {formatTimeDisplay(sortedTimes[0])}
             </span>
