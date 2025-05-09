@@ -79,11 +79,11 @@ export const TimeControl: React.FC = () => {
           >
             {/* Track */}
             <Slider.Track className="bg-[#607D8B] relative grow rounded-full h-2">
-              <Slider.Range className="absolute bg-amber-400 rounded-full h-2" />
+              <Slider.Range className="absolute bg-[#FFD600] rounded-full h-2" />
             </Slider.Track>
             {/* Thumb */}
             <Slider.Thumb
-              className="block w-6 h-6 bg-amber-400 border-4 border-white shadow-lg rounded-full focus:outline-none focus:ring-2 focus:ring-amber-400 transition-transform duration-150"
+              className="block w-6 h-6 bg-[#FFD600] border-4 border-white shadow-lg rounded-full focus:outline-none focus:ring-2 focus:ring-[#FFD600] transition-transform duration-150"
               aria-label="Selected time"
             />
           </Slider.Root>

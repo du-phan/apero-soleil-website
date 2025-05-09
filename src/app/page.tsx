@@ -14,6 +14,8 @@ export type Terrace = {
   isSunlit?: boolean; // Will be derived on the client from time slot properties
   sunAzimuth?: number;
   sunAltitude?: number;
+  // New: sunshine intervals for the day
+  sunlit_intervals?: { start: string; end: string }[];
   // Index signature for time slot properties, e.g., t0900, t0930, etc.
   [key: `t${string}`]: boolean | number | string | undefined;
 };

@@ -177,11 +177,11 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
               ["linear"],
               ["get", "sunlit_count"],
               1,
-              "rgba(255,224,178,0.85)",
+              "rgba(255,249,196,0.85)", // #FFF9C4 (light yellow)
               5,
-              "rgba(255,179,0,0.85)",
+              "rgba(255,224,102,0.85)", // #FFE066 (yellow)
               15,
-              "rgba(255,111,0,0.85)",
+              "rgba(255,214,0,0.85)", // #FFD600 (deep yellow)
             ],
             "circle-radius": [
               "step",
@@ -216,9 +216,9 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
             "text-halo-width": 0,
           },
         });
-        // Add unclustered terrace points
+        // Add unclustered terrace points (animated glow layer)
         map.addLayer({
-          id: "unclustered-point",
+          id: "unclustered-point-glow",
           type: "circle",
           source: SOURCE_ID,
           filter: ["!has", "point_count"],
@@ -227,9 +227,8 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
               "case",
               ["boolean", ["feature-state", "isSunlit"], false],
               "#F9A825",
-              "#607D8B",
+              "rgba(96,125,139,0.32)",
             ],
-            // Animated properties for sunlit markers (use feature-state)
             "circle-radius": [
               "case",
               ["boolean", ["feature-state", "isSunlit"], false],
@@ -242,19 +241,48 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
               ["feature-state", "__animated_blur"],
               0,
             ],
+            "circle-stroke-width": 0,
+            "circle-opacity": [
+              "case",
+              ["boolean", ["feature-state", "isSunlit"], false],
+              0.6,
+              0.55,
+            ],
+          },
+        });
+        // Add unclustered terrace points (static sun core layer)
+        map.addLayer({
+          id: "unclustered-point-core",
+          type: "circle",
+          source: SOURCE_ID,
+          filter: ["!has", "point_count"],
+          paint: {
+            "circle-color": [
+              "case",
+              ["boolean", ["feature-state", "isSunlit"], false],
+              "#FFD600",
+              "rgba(96,125,139,0.32)",
+            ],
+            "circle-radius": [
+              "case",
+              ["boolean", ["feature-state", "isSunlit"], false],
+              7,
+              7,
+            ],
+            "circle-blur": 0,
             "circle-stroke-width": [
               "case",
               ["boolean", ["feature-state", "isSunlit"], false],
-              2,
+              1.2,
               0,
             ],
-            "circle-stroke-color": [
+            "circle-stroke-color": "rgba(255,255,255,0.65)",
+            "circle-opacity": [
               "case",
               ["boolean", ["feature-state", "isSunlit"], false],
-              "#fff",
-              "#fff",
+              1,
+              0.55,
             ],
-            "circle-opacity": 1,
           },
         });
       }
@@ -305,11 +333,11 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
 
       function animate() {
         if (!running) return;
-        animationPhase.current += 0.04; // Speed of pulse
+        animationPhase.current += 0.018; // Slower speed of pulse
         const pulse = (Math.sin(animationPhase.current) + 1) / 2; // 0..1
         // Glow parameters (sunlit always bigger than shaded)
-        const minRadius = 13;
-        const maxRadius = 22;
+        const minRadius = 15;
+        const maxRadius = 26;
         const minBlur = 0.5;
         const maxBlur = 1.2;
         const animatedRadius = minRadius + (maxRadius - minRadius) * pulse;
@@ -373,7 +401,7 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
       // Handler for marker click
       const handleMarkerClick = (e: maplibregl.MapMouseEvent) => {
         const features = map.queryRenderedFeatures(e.point, {
-          layers: ["unclustered-point"],
+          layers: ["unclustered-point-glow"],
         });
         if (features.length > 0) {
           const feature = features[0];
@@ -403,17 +431,17 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
       const handleMapClick = (e: maplibregl.MapMouseEvent) => {
         // Only close if not clicking a marker
         const features = map.queryRenderedFeatures(e.point, {
-          layers: ["unclustered-point"],
+          layers: ["unclustered-point-glow"],
         });
         if (features.length === 0) {
           setSelectedTerrace(null);
           setPopupPos(null);
         }
       };
-      map.on("click", "unclustered-point", handleMarkerClick);
+      map.on("click", "unclustered-point-glow", handleMarkerClick);
       map.on("click", handleMapClick);
       return () => {
-        map.off("click", "unclustered-point", handleMarkerClick);
+        map.off("click", "unclustered-point-glow", handleMarkerClick);
         map.off("click", handleMapClick);
       };
     }, [terracesData]);
@@ -466,6 +494,14 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
       return { x: adjX, y: adjY };
     }
 
+    // Helper to format tHHMM to HH:MM
+    function formatTimeKeyToHuman(timeKey: string): string {
+      if (!timeKey.startsWith("t") || timeKey.length < 5) return "";
+      const hour = timeKey.slice(1, 3);
+      const min = timeKey.slice(3, 5);
+      return `${hour}:${min}`;
+    }
+
     return (
       <div
         ref={mapContainer}
@@ -494,159 +530,133 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
                     minWidth: 260,
                     maxWidth: 340,
                   }}
-                  className="bg-background/95 backdrop-blur-md rounded-xl shadow-xl border border-white/40 ring-1 ring-white/10 p-4 drop-shadow-xl"
+                  className={`${
+                    selectedTerrace &&
+                    !!selectedTerrace[
+                      currentTimeKey as keyof typeof selectedTerrace
+                    ]
+                      ? "bg-amber-50"
+                      : "bg-background/95"
+                  } backdrop-blur-md rounded-xl shadow-xl border border-white/40 ring-1 ring-white/10 p-4 drop-shadow-xl`}
                 >
-                  {/* Modern close button */}
-                  <button
-                    onClick={() => {
-                      setSelectedTerrace(null);
-                      setPopupPos(null);
-                    }}
-                    className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-400 rounded-full p-1 bg-white/60 backdrop-blur"
-                    aria-label="Close"
-                    tabIndex={0}
-                  >
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                      <path
-                        d="M6 6l8 8M14 6l-8 8"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                  </button>
                   {/* Popup content, minimalist and modern */}
-                  <div className="flex flex-col gap-3">
-                    <div className="text-base font-semibold text-foreground break-words leading-tight">
+                  <div className="flex flex-col space-y-3">
+                    {/* Address */}
+                    <div className="text-lg font-semibold text-slate-900 break-words leading-tight">
                       {selectedTerrace.address}
                     </div>
-                    <div className="flex items-center gap-2 text-base">
-                      {selectedTerrace.isSunlit ? (
-                        <svg
-                          className="w-5 h-5 text-amber-500"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <circle cx="12" cy="12" r="5" fill="#FFD600" />
-                          <path
-                            stroke="#FFB300"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            d="M12 2v2m0 16v2m10-10h-2M4 12H2m16.97 7.07l-1.41-1.41M6.34 6.34L4.93 4.93m12.73 0l-1.41 1.41M6.34 17.66l-1.41 1.41"
-                          />
-                        </svg>
+                    {/* Status (sunny/shade) */}
+                    <div className="flex items-center gap-2 text-base font-normal text-slate-600">
+                      {selectedTerrace &&
+                      !!selectedTerrace[
+                        currentTimeKey as keyof typeof selectedTerrace
+                      ] ? (
+                        <>
+                          <svg
+                            className="w-5 h-5 text-amber-400"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <circle cx="12" cy="12" r="5" fill="#FFD600" />
+                            <path
+                              stroke="#FFB300"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              d="M12 2v2m0 16v2m10-10h-2M4 12H2m16.97 7.07l-1.41-1.41M6.34 6.34L4.93 4.93m12.73 0l-1.41 1.41M6.34 17.66l-1.41 1.41"
+                            />
+                          </svg>
+                          <span>{`Ensoleillé à ${formatTimeKeyToHuman(
+                            currentTimeKey
+                          )}`}</span>
+                        </>
                       ) : (
-                        <svg
-                          className="w-5 h-5 text-slate-400"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            stroke="#94A3B8"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z"
-                          />
-                        </svg>
+                        <>
+                          <svg
+                            className="w-5 h-5 text-slate-400"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              stroke="#94A3B8"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z"
+                            />
+                          </svg>
+                          <span>{`À l'ombre à ${formatTimeKeyToHuman(
+                            currentTimeKey
+                          )}`}</span>
+                        </>
                       )}
-                      <span
-                        className={
-                          selectedTerrace.isSunlit
-                            ? "text-amber-700 font-medium"
-                            : "text-slate-500 font-medium"
-                        }
-                      >
-                        {selectedTerrace.isSunlit ? "Sunny" : "In shade"}
-                      </span>
                     </div>
-                    <div className="border-t border-border/20 my-2" />
+                    <div className="border-t border-border/20" />
                     {/* Sunshine timeline (minimal, modern) */}
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">
-                        Today&apos;s sunshine timeline:
+                    <div className="flex flex-col space-y-2">
+                      <div className="text-sm font-normal text-slate-500">
+                        Périodes d'ensoleillement aujourd'hui :
                       </div>
                       {(() => {
+                        if (!selectedTerrace) return null;
                         const sunPeriods =
-                          Array.isArray(
-                            selectedTerrace as unknown as {
-                              sunPeriods: { start: string; end: string }[];
-                            }
-                          ) &&
-                          (
-                            selectedTerrace as unknown as {
-                              sunPeriods: { start: string; end: string }[];
-                            }
-                          ).sunPeriods.length > 0
-                            ? (
-                                selectedTerrace as unknown as {
-                                  sunPeriods: { start: string; end: string }[];
-                                }
-                              ).sunPeriods
+                          Array.isArray(selectedTerrace.sunlit_intervals) &&
+                          selectedTerrace.sunlit_intervals.length > 0
+                            ? selectedTerrace.sunlit_intervals
                             : [
                                 { start: "09:00", end: "12:30" },
                                 { start: "14:00", end: "18:30" },
                               ];
                         return (
                           <div className="flex flex-col gap-1">
-                            {sunPeriods.map(
-                              (
-                                period: { start: string; end: string },
-                                idx: number
-                              ) => (
+                            {sunPeriods &&
+                              sunPeriods.map((period, idx) => (
                                 <div
                                   key={idx}
-                                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/60 backdrop-blur border border-slate-200/60 shadow-sm text-sm mb-2"
+                                  className="flex items-center gap-2 pl-4 py-1 pr-2 rounded bg-[#FFF7D1] text-sm text-slate-600"
                                 >
-                                  <span className="text-amber-400">
-                                    <svg
-                                      className="w-5 h-5"
-                                      fill="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <circle cx="12" cy="12" r="5" />
-                                      <g
-                                        stroke="currentColor"
-                                        strokeWidth="1.5"
-                                      >
-                                        <line x1="12" y1="2" x2="12" y2="4" />
-                                        <line x1="12" y1="20" x2="12" y2="22" />
-                                        <line x1="2" y1="12" x2="4" y2="12" />
-                                        <line x1="20" y1="12" x2="22" y2="12" />
-                                        <line
-                                          x1="4.93"
-                                          y1="4.93"
-                                          x2="6.34"
-                                          y2="6.34"
-                                        />
-                                        <line
-                                          x1="17.66"
-                                          y1="17.66"
-                                          x2="19.07"
-                                          y2="19.07"
-                                        />
-                                        <line
-                                          x1="4.93"
-                                          y1="19.07"
-                                          x2="6.34"
-                                          y2="17.66"
-                                        />
-                                        <line
-                                          x1="17.66"
-                                          y1="6.34"
-                                          x2="19.07"
-                                          y2="4.93"
-                                        />
-                                      </g>
-                                    </svg>
-                                  </span>
-                                  <span className="text-slate-700 font-medium">
+                                  <svg
+                                    className="w-5 h-5 text-amber-400"
+                                    fill="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <circle cx="12" cy="12" r="5" />
+                                    <g stroke="currentColor" strokeWidth="1.5">
+                                      <line x1="12" y1="2" x2="12" y2="4" />
+                                      <line x1="12" y1="20" x2="12" y2="22" />
+                                      <line x1="2" y1="12" x2="4" y2="12" />
+                                      <line x1="20" y1="12" x2="22" y2="12" />
+                                      <line
+                                        x1="4.93"
+                                        y1="4.93"
+                                        x2="6.34"
+                                        y2="6.34"
+                                      />
+                                      <line
+                                        x1="17.66"
+                                        y1="17.66"
+                                        x2="19.07"
+                                        y2="19.07"
+                                      />
+                                      <line
+                                        x1="4.93"
+                                        y1="19.07"
+                                        x2="6.34"
+                                        y2="17.66"
+                                      />
+                                      <line
+                                        x1="17.66"
+                                        y1="6.34"
+                                        x2="19.07"
+                                        y2="4.93"
+                                      />
+                                    </g>
+                                  </svg>
+                                  <span>
                                     {period.start} - {period.end}
                                   </span>
                                 </div>
-                              )
-                            )}
+                              ))}
                           </div>
                         );
                       })()}
@@ -655,7 +665,7 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
                     <Button
                       variant="secondary"
                       size="md"
-                      className="mt-2 w-full flex items-center justify-center gap-2 bg-amber-500 text-white shadow-lg rounded-lg hover:bg-amber-600 hover:scale-[1.03] transition-transform border border-amber-400/70"
+                      className="mt-3 w-full flex items-center gap-2 pl-4 bg-amber-200 text-amber-900 text-base font-semibold shadow-lg rounded-lg hover:bg-amber-300 hover:text-amber-900 hover:scale-[1.03] transition-transform focus:ring-2 focus:ring-amber-300/70"
                       onClick={() => {
                         const lat = selectedTerrace.lat;
                         const lng = selectedTerrace.lon;
@@ -669,7 +679,7 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
                         viewBox="0 0 24 24"
                         strokeWidth={1.5}
                         stroke="currentColor"
-                        className="w-5 h-5 text-white"
+                        className="w-5 h-5 text-amber-900"
                       >
                         <path
                           strokeLinecap="round"
@@ -677,28 +687,8 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
                           d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z"
                         />
                       </svg>
-                      <span>Voir les bars à proximité</span>
+                      <span>Voir la terrasse sur Maps</span>
                     </Button>
-                  </div>
-                  {/* Pointer triangle */}
-                  <div
-                    className="absolute left-1/2 top-full -translate-x-1/2 w-4 h-4"
-                    style={{ zIndex: 31 }}
-                    aria-hidden="true"
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 16 16"
-                      className="block"
-                    >
-                      <polygon
-                        points="8,0 16,16 0,16"
-                        fill="rgba(255,255,255,0.85)"
-                        stroke="#e2e8f0"
-                        strokeWidth="1"
-                      />
-                    </svg>
                   </div>
                 </motion.div>
               );
