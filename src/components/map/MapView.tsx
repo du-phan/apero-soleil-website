@@ -248,7 +248,7 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
             "circle-opacity": [
               "case",
               ["boolean", ["feature-state", "isSunlit"], false],
-              0.6,
+              0.85,
               0.55,
             ],
           },
@@ -336,13 +336,13 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
 
       function animate() {
         if (!running) return;
-        animationPhase.current += 0.018; // Slower speed of pulse
+        animationPhase.current += 0.03; // Faster speed of pulse
         const pulse = (Math.sin(animationPhase.current) + 1) / 2; // 0..1
         // Glow parameters (sunlit always bigger than shaded)
         const minRadius = 15;
-        const maxRadius = 26;
-        const minBlur = 0.5;
-        const maxBlur = 1.2;
+        const maxRadius = 32; // Larger pulse
+        const minBlur = 0.7;
+        const maxBlur = 2.0; // More blur
         const animatedRadius = minRadius + (maxRadius - minRadius) * pulse;
         const animatedBlur = minBlur + (maxBlur - minBlur) * pulse;
 
