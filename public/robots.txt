@@ -1,0 +1,9 @@
+# *
+User-agent: *
+Allow: /
+
+# Host
+Host: https://terrasse.life
+
+# Sitemaps
+Sitemap: https://terrasse.life/sitemap.xml
