@@ -105,7 +105,7 @@ const MethodologyModal: React.FC<MethodologyModalProps> = ({
                 </li>
                 <li>
                   <span className="font-medium">
-                    Position du soleil – bibliothèque pvlib
+                    Position du soleil – pvlib
                   </span>
                   <br />
                   <span className="text-slate-600">
@@ -115,7 +115,7 @@ const MethodologyModal: React.FC<MethodologyModalProps> = ({
                 </li>
                 <li>
                   <span className="font-medium">
-                    Cloud cover rate – Open-Meteo
+                    Cloud cover rate – modèle ARPEGE + AROME
                   </span>
                   <br />
                   <span className="text-slate-600">
@@ -134,7 +134,7 @@ const MethodologyModal: React.FC<MethodologyModalProps> = ({
                   <br />
                   <span className="text-slate-600">
                     Pour chaque créneau horaire, on calcule la position du
-                    soleil (azimut + hauteur) depuis un point de référence fixe
+                    soleil (azimut + altitude) depuis un point de référence fixe
                     au centre de Paris. Ces coordonnées permettent de simuler la
                     direction des rayons.
                   </span>
@@ -167,9 +167,8 @@ const MethodologyModal: React.FC<MethodologyModalProps> = ({
                   <br />
                   <span className="text-slate-600">
                     Même si le rayon passe, on regarde aussi la couverture
-                    nuageuse au moment donné. Si c&apos;est trop couvert
-                    (au-delà d&apos;un certain seuil), la terrasse est marquée
-                    comme &quot;sans soleil&quot;.
+                    nuageuse au moment donné. Si c&apos;est trop couvert, la
+                    terrasse est marquée comme &quot;sans soleil&quot;.
                   </span>
                 </li>
               </ol>
