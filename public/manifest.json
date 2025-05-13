@@ -1,0 +1,22 @@
+{
+  "name": "Terrasse au Soleil - Où boire un verre au soleil à Paris",
+  "short_name": "Terrasse au Soleil",
+  "description": "Trouvez une terrasse ensoleillée à Paris aujourd'hui ! Terrasse au Soleil vous aide à découvrir où boire un verre au soleil, profiter d'un café ou d'un repas sur une terrasse ensoleillée à Paris, en temps réel.",
+  "lang": "fr-FR",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9a825",
+  "theme_color": "#f9a825",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
