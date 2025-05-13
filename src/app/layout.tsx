@@ -36,6 +36,7 @@ export const metadata: Metadata = {
     locale: "fr_FR",
     type: "website",
   },
+  metadataBase: new URL("https://terrasse.life"),
 };
 
 export default function RootLayout({
