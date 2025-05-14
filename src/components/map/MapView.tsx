@@ -101,12 +101,18 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
     }, []);
 
     // Debounced fetch for map move/zoom (fetches new terrace data for visible bounds)
-    const debouncedFetchTerraces = useCallback(
+    const debouncedFetchTerraces = useRef(
       debounce((bounds: LngLatBounds) => {
         fetchTerraces(bounds);
-      }, 400),
-      [fetchTerraces]
+      }, 400)
     );
+
+    // Update debounced function if fetchTerraces changes
+    useEffect(() => {
+      debouncedFetchTerraces.current = debounce((bounds: LngLatBounds) => {
+        fetchTerraces(bounds);
+      }, 400);
+    }, [fetchTerraces]);
 
     // Initialize map and layers only once
     useEffect(() => {
@@ -132,7 +138,7 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
       map.on("moveend", () => {
         if (!mapRef.current) return;
         const bounds = mapRef.current.getBounds();
-        debouncedFetchTerraces(bounds);
+        debouncedFetchTerraces.current(bounds);
       });
 
       return () => {
@@ -328,6 +334,9 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
     const animationRef = useRef<number | null>(null);
     const animationPhase = useRef<number>(0);
 
+    // Ref to track the animated radius of the selected marker
+    const markerRadiusRef = useRef<number>(16); // default to 16 for initial render
+
     // Animate sunlit marker glow
     useEffect(() => {
       if (!mapRef.current) return;
@@ -371,6 +380,13 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
                   __animated_blur: animatedBlur,
                 }
               );
+              // If this is the selected marker, update the ref
+              if (
+                selectedTerrace &&
+                feature.properties.id === selectedTerrace.id
+              ) {
+                markerRadiusRef.current = animatedRadius;
+              }
             } else if (
               feature.properties &&
               feature.properties.id !== undefined
@@ -383,6 +399,13 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
                   __animated_blur: 0,
                 }
               );
+              // If this is the selected marker and not sunlit, use static radius
+              if (
+                selectedTerrace &&
+                feature.properties.id === selectedTerrace.id
+              ) {
+                markerRadiusRef.current = 10;
+              }
             }
           }
         }
@@ -395,7 +418,7 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
           cancelAnimationFrame(animationRef.current);
         }
       };
-    }, [terracesData, currentTimeKey]);
+    }, [terracesData, currentTimeKey, selectedTerrace]);
 
     // Listen for marker clicks and map clicks
     useEffect(() => {
@@ -477,24 +500,39 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
       []
     );
 
-    // Helper: adjust popup position to avoid overlapping screen edges (simplified)
+    // Helper: adjust popup position to avoid overlapping screen edges (responsive, with alignment)
     function getAdjustedPopupPos(x: number, y: number) {
-      const popupWidth = 320;
-      const popupHeight = 220; // estimate
-      const pointerOffset = 16;
+      const smBreakpoint = 640; // Tailwind's sm: breakpoint
+      const isMobile =
+        typeof window !== "undefined" && window.innerWidth < smBreakpoint;
       const margin = 12;
       const vw = window.innerWidth;
       const vh = window.innerHeight;
+      const popupWidth = isMobile ? Math.min(vw * 0.85, vw - 2 * margin) : 340;
+      const popupHeight = 220; // estimate
+      const markerOffset = markerRadiusRef.current || 16; // fallback
       let adjX = x;
-      let adjY = y - pointerOffset;
+      let align: "left" | "center" | "right" = "center";
       // Avoid left/right overflow
-      if (x - popupWidth / 2 < margin) adjX = margin + popupWidth / 2;
-      if (x + popupWidth / 2 > vw - margin) adjX = vw - margin - popupWidth / 2;
-      // Avoid top overflow (just enough to keep visible)
-      if (adjY - popupHeight < margin) adjY = margin + popupHeight;
-      // Avoid bottom overflow
-      if (adjY > vh - margin) adjY = vh - margin;
-      return { x: adjX, y: adjY };
+      if (x - popupWidth / 2 < margin) {
+        adjX = margin;
+        align = "left";
+      } else if (x + popupWidth / 2 > vw - margin) {
+        adjX = vw - margin;
+        align = "right";
+      }
+      // Calculate ideal Y position (just above marker)
+      const idealY = y - markerOffset;
+      let adjY = idealY;
+      // If popup would overflow top, allow partial offscreen but never push below marker
+      if (adjY - popupHeight < margin) {
+        adjY = Math.max(margin, idealY);
+      }
+      // If popup would overflow bottom, push up
+      if (adjY + popupHeight > vh - margin) {
+        adjY = vh - margin - popupHeight;
+      }
+      return { x: adjX, y: adjY, align };
     }
 
     // Helper to format tHHMM to HH:MM
@@ -583,7 +621,14 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
           {selectedTerrace &&
             popupPos &&
             (() => {
-              const { x, y } = getAdjustedPopupPos(popupPos.x, popupPos.y);
+              const { x, y, align } = getAdjustedPopupPos(
+                popupPos.x,
+                popupPos.y
+              );
+              let transform = "translate(-50%, -100%)";
+              if (align === "left") transform = "translateY(-100%)";
+              if (align === "right")
+                transform = "translateX(-100%) translateY(-100%)";
               return (
                 <motion.div
                   key={selectedTerrace.id}
@@ -594,30 +639,30 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
                   style={{
                     position: "absolute",
                     left: x,
-                    top: y - 16, // offset above marker
-                    transform: "translate(-50%, -100%)",
+                    top: y, // already offset by marker radius
+                    transform,
                     zIndex: 30,
                     pointerEvents: "auto",
                     minWidth: 260,
                     maxWidth: 340,
                   }}
-                  className={`${
+                  className={`$${
                     selectedTerrace &&
                     !!selectedTerrace[
                       currentTimeKey as keyof typeof selectedTerrace
                     ]
                       ? "bg-amber-50"
                       : "bg-background/95"
-                  } backdrop-blur-md rounded-xl shadow-xl border border-white/40 ring-1 ring-white/10 p-4 drop-shadow-xl`}
+                  } backdrop-blur-md rounded-lg sm:rounded-xl shadow-xl border border-white/40 ring-1 ring-white/10 p-2 sm:p-4 drop-shadow-xl max-w-[85vw] sm:max-w-[340px] max-h-[60vh] sm:max-h-[none] overflow-y-auto`}
                 >
                   {/* Popup content, minimalist and modern */}
                   <div className="flex flex-col space-y-3">
                     {/* Address */}
-                    <div className="text-lg font-semibold text-slate-900 break-words leading-tight">
+                    <div className="text-base sm:text-lg font-semibold text-slate-900 break-words leading-tight">
                       {selectedTerrace.address}
                     </div>
                     {/* Status (sunny/shade) */}
-                    <div className="flex items-center gap-2 text-base font-normal text-slate-600">
+                    <div className="flex items-center gap-2 text-sm sm:text-base font-normal text-slate-600">
                       {selectedTerrace &&
                       !!selectedTerrace[
                         currentTimeKey as keyof typeof selectedTerrace
@@ -681,7 +726,7 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
                               sunPeriods.map((period, idx) => (
                                 <div
                                   key={idx}
-                                  className="flex items-center gap-2 pl-4 py-1 pr-2 rounded bg-[#FFF7D1] text-sm text-slate-600"
+                                  className="flex items-center gap-2 pl-4 py-1 pr-2 rounded bg-[#FFF7D1] text-xs sm:text-sm text-slate-600"
                                 >
                                   <svg
                                     className="w-5 h-5 text-amber-400"
@@ -726,7 +771,7 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
                                 </div>
                               ))
                             ) : (
-                              <div className="flex items-center gap-2 pl-4 py-2 pr-3 rounded bg-slate-100 text-sm text-slate-600">
+                              <div className="flex items-center gap-2 pl-4 py-2 pr-3 rounded bg-slate-100 text-xs sm:text-sm text-slate-600">
                                 <svg
                                   className="w-5 h-5 text-slate-400"
                                   fill="none"
@@ -753,7 +798,7 @@ const MapView = forwardRef<MapViewHandle, MapViewProps>(
                     <Button
                       variant="secondary"
                       size="md"
-                      className="mt-3 w-full flex items-center gap-2 pl-4 bg-amber-200 text-amber-900 text-base font-semibold shadow-lg rounded-lg hover:bg-amber-300 hover:text-amber-900 hover:scale-[1.03] transition-transform focus:ring-2 focus:ring-amber-300/70"
+                      className="mt-3 w-full flex items-center gap-2 pl-4 bg-amber-200 text-amber-900 text-sm sm:text-base font-semibold shadow-lg rounded-lg hover:bg-amber-300 hover:text-amber-900 hover:scale-[1.03] transition-transform focus:ring-2 focus:ring-amber-300/70"
                       onClick={() => {
                         const lat = selectedTerrace.lat;
                         const lng = selectedTerrace.lon;

@@ -56,7 +56,7 @@ const MethodologyModal: React.FC<MethodologyModalProps> = ({
             <div className="flex items-center gap-3 mb-2">
               <span className="text-3xl">☀️</span>
               <h2 className="text-2xl font-bold text-slate-900">
-                La science derrière ton apéro au soleil
+                C'est pas sorcier
               </h2>
             </div>
             <div className="space-y-3">
@@ -134,7 +134,7 @@ const MethodologyModal: React.FC<MethodologyModalProps> = ({
                   <br />
                   <span className="text-slate-600">
                     Pour chaque créneau horaire, on calcule la position du
-                    soleil (azimut + altitude) depuis un point de référence fixe
+                    soleil (azimut + hauteur) depuis un point de référence fixe
                     au centre de Paris. Ces coordonnées permettent de simuler la
                     direction des rayons.
                   </span>
