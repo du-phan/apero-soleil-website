@@ -56,7 +56,7 @@ const MethodologyModal: React.FC<MethodologyModalProps> = ({
             <div className="flex items-center gap-3 mb-2">
               <span className="text-3xl">☀️</span>
               <h2 className="text-2xl font-bold text-slate-900">
-                C'est pas sorcier
+                C&apos;est pas sorcier
               </h2>
             </div>
             <div className="space-y-3">
@@ -119,9 +119,9 @@ const MethodologyModal: React.FC<MethodologyModalProps> = ({
                   </span>
                   <br />
                   <span className="text-slate-600">
-                    Données horaires sur la couverture nuageuse. Si le ciel est
-                    trop couvert, la terrasse est considérée comme à
-                    l&apos;ombre, même sans obstacle.
+                    Données horaires sur la couverture nuageuse (mises à jour
+                    chaque heure). Si le ciel est trop couvert, la terrasse est
+                    considérée comme à l&apos;ombre, même sans obstacle.
                   </span>
                 </li>
               </ul>
@@ -163,12 +163,19 @@ const MethodologyModal: React.FC<MethodologyModalProps> = ({
                   </ul>
                 </li>
                 <li>
-                  <span className="font-medium">Filtrage météo (nuages)</span>
+                  <span className="font-medium">
+                    Prise en compte de la météo
+                  </span>
                   <br />
                   <span className="text-slate-600">
                     Même si le rayon passe, on regarde aussi la couverture
-                    nuageuse au moment donné. Si c&apos;est trop couvert, la
-                    terrasse est marquée comme &quot;sans soleil&quot;.
+                    nuageuse au moment donné. Nous combinons plusieurs métriques
+                    de couverture nuageuse à différentes altitudes&nbsp;:
+                    l&apos;étage inférieur (0–2&nbsp;000&nbsp;m), l&apos;étage
+                    moyen (2&nbsp;000–6&nbsp;000&nbsp;m) et l&apos;étage
+                    supérieur (au-dessus de 6&nbsp;000&nbsp;m). Si c&apos;est
+                    trop couvert, la terrasse est marquée comme &quot;sans
+                    soleil&quot;.
                   </span>
                 </li>
               </ol>
